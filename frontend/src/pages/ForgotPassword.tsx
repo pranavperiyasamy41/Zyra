@@ -65,7 +65,7 @@ const ForgotPasswordPage = () => {
               </label>
               <input
                 id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                className="mt-1 block w-full rounded-md border-gray-300"
               />
             </div>
             {error && <p className="text-sm text-red-600">{error}</p>}
@@ -86,7 +86,7 @@ const ForgotPasswordPage = () => {
               </label>
               <input
                 id="otp" type="text" value={otp} onChange={(e) => setOtp(e.target.value)} required
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                className="mt-1 block w-full rounded-md border-gray-300"
               />
             </div>
             <div className="mb-4">
@@ -95,7 +95,7 @@ const ForgotPasswordPage = () => {
               </label>
               <input
                 id="newPassword" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                className="mt-1 block w-full rounded-md border-gray-300"
               />
               <p className="mt-1 text-xs text-gray-500">
                 8+ chars, 1 uppercase, 1 number, 1 special char.

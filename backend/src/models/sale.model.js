@@ -36,6 +36,17 @@ const saleSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    customerName: {
+      type: String,
+      default: 'N/A',
+    },
+    customerPhone: {
+      type: String,
+    },
+    customerId: {
+      type: String,
+      required: true,
+    },
   },
   {
     timestamps: true,

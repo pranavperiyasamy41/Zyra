@@ -7,15 +7,21 @@ function App() {
   const location = useLocation();
   const navigate = useNavigate();
 
- const getNavLinkClass = (path: string) => {
-    return location.pathname === path // <-- This is the fix
+  const getNavLinkClass = (path: string) => {
+    // Logic for link highlighting
+    if (path === '/dashboard') {
+      return location.pathname === path
+        ? 'bg-blue-100 text-blue-700 dark:bg-blue-700 dark:text-white'
+        : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-slate-700';
+    }
+    return location.pathname.startsWith(path) 
       ? 'bg-blue-100 text-blue-700 dark:bg-blue-700 dark:text-white'
       : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-slate-700';
   };
 
   const handleLogout = () => {
     logout();
-    navigate('/landing'); // This is correct
+    navigate('/landing');
   };
 
   return (
@@ -25,8 +31,6 @@ function App() {
       {token && (
         <nav className="flex w-64 flex-col border-r border-gray-200 bg-white dark:border-slate-700 dark:bg-slate-800">
           
-          {/* --- This is the missing sidebar content --- */}
-
           {/* Header */}
           <div className="flex h-16 flex-shrink-0 items-center justify-between border-b px-4 dark:border-slate-700">
             <h1 className="text-xl font-bold text-blue-600">Smart Pharmacy</h1>
@@ -62,6 +66,16 @@ function App() {
               >
                 Notes
               </Link>
+
+              {/* --- CONDITIONAL ADMIN LINK (This now works) --- */}
+              {user && user.role === 'superadmin' && (
+                <Link
+                  to="/dashboard/admin/users"
+                  className={`group flex items-center rounded-md px-2 py-2 text-sm font-medium ${getNavLinkClass('/dashboard/admin/users')}`}
+                >
+                  Admin Users
+                </Link>
+              )}
             </div>
           </div>
 
@@ -82,8 +96,6 @@ function App() {
               <ThemeToggle />
             </div>
           </div>
-          {/* --- End of sidebar content --- */}
-
         </nav>
       )}
 

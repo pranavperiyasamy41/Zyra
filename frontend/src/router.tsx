@@ -12,6 +12,7 @@ import DashboardPage from './pages/Dashboard';
 import InventoryPage from './pages/InventoryPage';
 import SalesPage from './pages/SalesPage';
 import NotesPage from './pages/NotesPage';
+import AdminUsersPage from './pages/AdminUsersPage'; // <-- Import new page
 
 export const router = createBrowserRouter([
   {
@@ -44,6 +45,10 @@ export const router = createBrowserRouter([
       {
         path: 'notes', // /dashboard/notes
         element: <NotesPage />,
+      },
+      {
+        path: 'admin/users', // URL will be /dashboard/admin/users
+        element: <AdminUsersPage />,
       },
     ],
   },

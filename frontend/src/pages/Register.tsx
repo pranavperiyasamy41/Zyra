@@ -93,7 +93,7 @@ const RegisterPage = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                className="mt-1 block w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
               />
             </div>
 
@@ -107,7 +107,7 @@ const RegisterPage = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="flex w-full justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-blue-400"
+                className="flex w-full justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-blue-400"
               >
                 {loading ? 'Sending OTP...' : 'Get Verification Code'}
               </button>
@@ -132,7 +132,7 @@ const RegisterPage = () => {
                 value={otp}
                 onChange={(e) => setOtp(e.target.value)}
                 required
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                className="mt-1 block w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
               />
             </div>
             
@@ -147,7 +147,7 @@ const RegisterPage = () => {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                className="mt-1 block w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
               />
             </div>
 
@@ -165,7 +165,7 @@ const RegisterPage = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                className="mt-1 block w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
               />
               <p className="mt-1 text-xs text-gray-500">
                 8+ chars, 1 uppercase, 1 number, 1 special char.
@@ -185,7 +185,7 @@ const RegisterPage = () => {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                className="mt-1 block w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
               />
             </div>
 
@@ -199,7 +199,7 @@ const RegisterPage = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="flex w-full justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-blue-400"
+                className="flex w-full justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-blue-400"
               >
                 {loading ? 'Creating Account...' : 'Register'}
               </button>

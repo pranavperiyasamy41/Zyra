@@ -6,6 +6,7 @@ import medicineRoutes from './src/routes/medicine.routes.js'; // <-- 1. Import n
 import connectDB from './src/config/db.config.js'; // <-- 1. Import the connection
 import saleRoutes from './src/routes/sale.routes.js'; // <-- 1. Import new routes
 import noteRoutes from './src/routes/note.routes.js';
+import adminRoutes from './src/routes/admin.routes.js'; // <-- 1. Import Admin Routes
 // Load .env variables
 dotenv.config();
 
@@ -24,6 +25,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/medicines', medicineRoutes); // <-- 2. Add the medicine routes
 app.use('/api/sales', saleRoutes); // <-- 2. Add the sales routes
 app.use('/api/notes', noteRoutes);
+app.use('/api/admin', adminRoutes); // <-- 2. Add the Admin Router
 
 // A simple "home" route
 app.get('/', (req, res) => {

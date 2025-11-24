@@ -47,7 +47,7 @@ const LoginPage = () => {
             </label>
             <input
               id="emailOrUsername" type="text" value={emailOrUsername} onChange={(e) => setEmailOrUsername(e.target.value)} required
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+              className="mt-1 block w-full rounded-md border border-gray-300 focus:border-blue-500 focus:ring-blue-500 sm:text-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white"
             />
           </div>
           <div className="mb-6">
@@ -56,7 +56,7 @@ const LoginPage = () => {
             </label>
             <input
               id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+              className="mt-1 block w-full rounded-md border border-gray-300 focus:border-blue-500 focus:ring-blue-500 sm:text-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white"
             />
             <div className="text-right mt-1">
               <a href="/forgot-password" className="text-sm font-medium text-blue-600 hover:text-blue-500">
