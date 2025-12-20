@@ -4,13 +4,15 @@ const apiClient = axios.create({
   baseURL: 'http://localhost:5000/api', 
 });
 
-// --- THIS IS THE FIX ---
-// Set the token on initial load from localStorage
-// This runs *before* any of your React components or hooks.
-const token = localStorage.getItem('token');
-if (token) {
-  apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-}
-// ---
+// Use an interceptor to inject the token into EVERY request dynamically
+apiClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+}, (error) => {
+  return Promise.reject(error);
+});
 
 export default apiClient;

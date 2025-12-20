@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import ThemeToggle from '../components/ThemeToggle'; // <-- Includes the import
+import ThemeToggle from '../components/ThemeToggle'; 
 
 const LandingPage = () => {
   return (
@@ -20,7 +20,7 @@ const LandingPage = () => {
             >
               Sign Up
             </Link>
-            <ThemeToggle /> {/* <-- Includes the toggle */}
+            <ThemeToggle />
           </div>
         </nav>
       </header>
@@ -41,6 +41,18 @@ const LandingPage = () => {
           >
             Get Started for Free
           </Link>
+          
+          {/* --- ADDED ADMIN LINK --- */}
+          <div className="mt-6">
+            <Link 
+                to="/admin-login" 
+                className="text-sm font-medium text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-500"
+            >
+                System Administrator Access
+            </Link>
+          </div>
+          {/* ----------------------- */}
+          
         </section>
 
         {/* --- Features Section --- */}
@@ -93,5 +105,4 @@ const LandingPage = () => {
     </div>
   );
 };
-
 export default LandingPage;

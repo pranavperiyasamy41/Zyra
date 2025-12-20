@@ -1,14 +1,12 @@
-// This function assumes the 'protect' middleware has already run 
-// and attached the user object (req.user) to the request.
-
+// backend/src/middleware/adminAuth.middleware.js
 const adminProtect = (req, res, next) => {
-  // Check if the user exists and has the necessary role
-  if (req.user && (req.user.role === 'admin' || req.user.role === 'superadmin')) {
+  // Check if the role is 'superadmin' OR 'admin'
+  if (req.user && (req.user.role === 'superadmin' || req.user.role === 'admin')) {
     next();
   } else {
-    // 403 Forbidden: The server understands the request but refuses to authorize it.
-    res.status(403).json({ message: 'Access denied. Administrator privileges required.' });
+    res.status(403).json({ 
+      message: 'Access Denied: You do not have Super Admin privileges.' 
+    });
   }
 };
-
 export default adminProtect;

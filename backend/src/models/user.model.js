@@ -40,6 +40,23 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: 'My Pharmacy',
     },
+    role: {
+      type: String,
+      enum: ['user', 'admin', 'superadmin'],
+      default: 'user',
+    },
+    
+    // --- NEW FIELD: ACCOUNT APPROVAL STATE ---
+    isApproved: {
+      type: Boolean,
+      default: false, // ALL NEW USERS ARE PENDING APPROVAL
+    },
+    // ---
+    
+    pharmacyName: {
+      type: String,
+      required: true,
+    },
   },
   {
     timestamps: true, 

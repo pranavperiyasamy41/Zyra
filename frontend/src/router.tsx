@@ -1,28 +1,24 @@
-import { createBrowserRouter, Outlet } from 'react-router-dom';
-// Layouts
+import { createBrowserRouter, Outlet, Navigate } from 'react-router-dom';
 import App from './App';
 import ProtectedRoute from './components/ProtectedRoute';
-// Pages
 import Root from './pages/Root';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/Login';
 import RegisterPage from './pages/Register';
 import ForgotPasswordPage from './pages/ForgotPassword';
-import DashboardPage from './pages/Dashboard';
 import InventoryPage from './pages/InventoryPage';
 import SalesPage from './pages/SalesPage';
 import NotesPage from './pages/NotesPage';
-import AdminUsersPage from './pages/AdminUsersPage'; // <-- Import new page
+import AdminUsersPage from './pages/AdminUsersPage';
+import AdminLoginPage from './pages/AdminLoginPage';
+import DashboardWrapper from './pages/DashboardWrapper';
 
 export const router = createBrowserRouter([
   {
-    // 1. Root Path: This is the first page hit. It just redirects.
     path: '/',
     element: <Root />,
   },
   {
-    // 2. Protected App Routes: All routes here are protected
-    // and live inside your sidebar layout (<App />).
     path: '/dashboard',
     element: (
       <ProtectedRoute>
@@ -31,48 +27,36 @@ export const router = createBrowserRouter([
     ),
     children: [
       {
-        index: true, // /dashboard (defaults to this)
-        element: <DashboardPage />,
+        index: true, // This is the ONLY index route
+        element: <DashboardWrapper />, 
       },
       {
-        path: 'inventory', // /dashboard/inventory
+        path: 'inventory',
         element: <InventoryPage />,
       },
       {
-        path: 'sales', // /dashboard/sales
+        path: 'sales',
         element: <SalesPage />,
       },
       {
-        path: 'notes', // /dashboard/notes
+        path: 'notes',
         element: <NotesPage />,
       },
       {
-        path: 'admin/users', // URL will be /dashboard/admin/users
+        path: 'admin/users',
         element: <AdminUsersPage />,
       },
     ],
   },
   {
-    // 3. Public-Only Routes: These are for logged-out users.
-    // They use a simple <Outlet /> with no sidebar.
     element: <Outlet />,
     children: [
-      {
-        path: '/landing',
-        element: <LandingPage />,
-      },
-      {
-        path: '/login',
-        element: <LoginPage />,
-      },
-      {
-        path: '/register',
-        element: <RegisterPage />,
-      },
-      {
-        path: '/forgot-password',
-        element: <ForgotPasswordPage />,
-      },
+      { path: '/landing', element: <LandingPage /> },
+      { path: '/login', element: <LoginPage /> },
+      { path: '/register', element: <RegisterPage /> },
+      { path: '/forgot-password', element: <ForgotPasswordPage /> },
+      { path: '/admin-login', element: <AdminLoginPage /> },
+      { path: '*', element: <Navigate to="/landing" replace /> },
     ],
   },
 ]);

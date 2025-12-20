@@ -42,16 +42,17 @@ export const addMedicine = async (req, res) => {
 // @access  Private
 export const getMedicines = async (req, res) => {
   try {
-    // 1. Find all medicines that belong to this user
-    const medicines = await Medicine.find({ user: req.user.id })
-                                    .sort({ expiryDate: 1 }); // Sort by expiry date, soonest first
+    let query = { user: req.user.id };
 
-    // 2. Send them back
+    // If the person logged in is an Admin, they should see ALL medicines
+    if (req.user.role === 'admin' || req.user.role === 'superadmin') {
+      query = {}; // Empty query means "Find All"
+    }
+
+    const medicines = await Medicine.find(query);
     res.status(200).json(medicines);
-
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Error fetching inventory' });
   }
 };
 

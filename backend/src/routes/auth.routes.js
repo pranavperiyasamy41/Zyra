@@ -4,7 +4,8 @@ import {
   registerVerify, 
   loginUser,
   forgotPassword,  // <-- 1. Import
-  resetPassword
+  resetPassword,
+  adminLogin
 } from '../controllers/auth.controller.js';
 
 const router = Router();
@@ -18,5 +19,6 @@ router.post('/login', loginUser);
 
 router.post('/forgot-password', forgotPassword);
 router.post('/reset-password', resetPassword);
+router.post('/admin-login', adminLogin);
 
 export default router;

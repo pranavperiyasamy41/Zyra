@@ -1,13 +1,31 @@
 import { Router } from 'express';
-import protect from '../middleware/auth.middleware.js'; // Standard Auth Check
-import adminProtect from '../middleware/adminAuth.middleware.js'; // Role Check
-import { getAllUsers } from '../controllers/admin.controller.js';
+import protect from '../middleware/auth.middleware.js'; 
+import adminProtect from '../middleware/adminAuth.middleware.js'; 
+import { 
+    getAllUsers, 
+    updateUserRole, 
+    deleteUser,
+    getAdminMetrics, // <-- NEW IMPORT
+    setUserApprovalStatus // <-- NEW IMPORT
+} from '../controllers/admin.controller.js'; 
 
 const router = Router();
 
-// --- ALL ROUTES HERE ARE ADMIN ONLY ---
+// Route for getting ALL users
 router.route('/users')
-    // Route chain: 1. Auth check, 2. Role check, 3. Controller
     .get(protect, adminProtect, getAllUsers);
+
+// Route for specific user actions
+router.route('/users/:id')
+    .put(protect, adminProtect, updateUserRole) 
+    .delete(protect, adminProtect, deleteUser); 
+
+// --- NEW ROUTE: ADMIN DASHBOARD METRICS ---
+router.route('/metrics')
+    .get(protect, adminProtect, getAdminMetrics); 
+
+// --- NEW ROUTE: SET USER APPROVAL STATUS ---
+router.route('/users/:id/approve')
+    .put(protect, adminProtect, setUserApprovalStatus); 
 
 export default router;
