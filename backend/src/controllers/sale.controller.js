@@ -1,154 +1,88 @@
 import Sale from '../models/sale.model.js';
 import Medicine from '../models/medicine.model.js';
-import mongoose from 'mongoose';
 
-// @desc    Record a new sale
-// @route   POST /api/sales
-// @access  Private
-export const recordSale = async (req, res) => {
-  const { itemsSold, totalAmount, customerName, customerPhone, customerId } = req.body;
-
-  // 1. Core Validation Check
-  if (!itemsSold || itemsSold.length === 0 || !totalAmount || !customerId) {
-    return res.status(400).json({ message: 'Missing required sale data' });
-  }
-
-  // --- NEW VALIDATION ---
-  const numericCustomerId = Number(customerId);
-  
-  if (isNaN(numericCustomerId) || numericCustomerId < 100 || numericCustomerId > 10000) {
-      return res.status(400).json({ message: 'Customer ID must be a number between 100 and 10000.' });
-  }
-
-  // Check for uniqueness
-  const existingSale = await Sale.findOne({ customerId });
-  if (existingSale) {
-      return res.status(409).json({ message: `Customer ID ${customerId} already exists.` });
-  }
-  // --- END NEW VALIDATION ---
-
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
+// 1. CREATE SALE
+export const createSale = async (req, res) => {
   try {
-    // 3. Create the sale record
-    const sale = new Sale({
-      user: req.user.id,
-      itemsSold,
-      totalAmount,
-      customerName,
-      customerPhone,
-      customerId,
-    });
-    const createdSale = await sale.save({ session });
+    const { items, totalAmount, customerName, customerMobile } = req.body;
 
-    // 4. Update the medicine stock for each item sold
-    for (const item of itemsSold) {
-      const medicine = await Medicine.findById(item.medicine).session(session);
-
-      if (!medicine) {
-        throw new Error(`Medicine with ID ${item.medicine} not found`);
-      }
-      
-      // Security check: Make sure the medicine belongs to the user
-      if (medicine.user.toString() !== req.user.id) {
-          throw new Error('Not authorized to sell this medicine');
-      }
-
-      if (medicine.quantity < item.quantitySold) {
-        throw new Error(`Not enough stock for ${medicine.name}`);
-      }
-
-      medicine.quantity -= item.quantitySold;
-      await medicine.save({ session });
+    // Validate Input
+    if (!items || items.length === 0) {
+      return res.status(400).json({ message: "Cart is empty" });
     }
 
-    // 5. If all is good, commit the transaction
-    await session.commitTransaction();
+    // Decrease Stock Logic
+    for (const item of items) {
+       if (!item.medicineId) {
+         return res.status(400).json({ message: `Invalid item in cart: ${item.name}` });
+       }
+
+       // Find medicine by ID
+       let medicine = await Medicine.findById(item.medicineId);
+       
+       // Fallback: If not found by ID, try Name
+       if (!medicine) {
+         medicine = await Medicine.findOne({ name: item.name, user: req.user._id });
+       }
+
+       if (!medicine) {
+          return res.status(404).json({ message: `Medicine not found in inventory: ${item.name}` });
+       }
+
+       // 🛡️ SAFEGUARD: Handle "Ghost" Numbers
+       // Ensure we treat existing stock as a number. If missing, treat as 0.
+       const currentStock = Number(medicine.stock) || Number(medicine.quantity) || 0;
+
+       if (currentStock < item.quantity) {
+         return res.status(400).json({ message: `Insufficient stock for ${item.name}. Available: ${currentStock}` });
+       }
+
+       // ✅ Calculate New Stock safely
+       const newStock = Math.max(0, currentStock - item.quantity);
+
+       // Update both fields to keep them in sync and clean up the DB
+       medicine.stock = newStock;
+       medicine.quantity = newStock; 
+       
+       await medicine.save();
+    }
+
+    // Create Sale Record
+    const sale = new Sale({
+      user: req.user._id,
+      customerName: customerName || 'Guest',
+      customerMobile: customerMobile || '',
+      items,
+      totalAmount
+    });
+
+    const createdSale = await sale.save();
     res.status(201).json(createdSale);
 
-  } catch (error) {
-    // 6. Abort
-    await session.abortTransaction();
-    console.error(error);
-    res.status(500).json({ message: 'Server error', error: error.message });
-  } finally {
-    // 7. End session
-    session.endSession();
+  } catch (error) { 
+    console.error("Sale Error Details:", error); 
+    res.status(500).json({ message: error.message || "Server Error processing sale" }); 
   }
 };
 
-// @desc    Get sales history for the user
-// @route   GET /api/sales
-// @access  Private
-export const getSalesHistory = async (req, res) => {
+// 2. GET ALL SALES
+export const getSales = async (req, res) => {
   try {
-    const sales = await Sale.find({ user: req.user.id }).sort({ saleDate: -1 });
-    res.status(200).json(sales);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
-  }
+    const sales = await Sale.find({ user: req.user._id }).sort({ createdAt: -1 });
+    res.json(sales);
+  } catch (error) { res.status(500).json({ message: "Server Error" }); }
 };
 
-// @desc    Delete a sale record
-// @route   DELETE /api/sales/:id
-// @access  Private
-export const deleteSale = async (req, res) => {
+// 3. GET LAST ORDER
+export const getLastOrder = async (req, res) => {
   try {
-    const sale = await Sale.findOne({ _id: req.params.id, user: req.user.id });
+    const { mobile } = req.params;
+    const sale = await Sale.findOne({ 
+      user: req.user._id, 
+      customerMobile: mobile 
+    }).sort({ createdAt: -1 });
 
-    if (!sale) {
-      return res.status(404).json({ message: 'Sale record not found' });
-    }
-
-    // WARNING: This only deletes the record. It DOES NOT restore inventory stock.
-    // Full stock reversal requires detailed transaction logging.
-    await Sale.deleteOne({ _id: req.params.id });
-
-    res.status(200).json({ message: 'Sale record deleted. Stock must be manually corrected.' });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
-  }
-};
-
-// @desc    Update sale metadata (Name, Phone, ID)
-// @route   PUT /api/sales/:id
-// @access  Private
-export const updateSale = async (req, res) => {
-  try {
-    const { customerName, customerPhone, customerId } = req.body;
-
-    const sale = await Sale.findOne({ _id: req.params.id, user: req.user.id });
-
-    if (!sale) {
-      return res.status(404).json({ message: 'Sale record not found' });
-    }
-
-    // Only allow updating customer metadata, not itemsSold or totalAmount
-    sale.customerName = customerName || sale.customerName;
-    sale.customerPhone = customerPhone || sale.customerPhone;
-    
-    // Validate and update customerId if present
-    if (customerId) {
-        const numericCustomerId = Number(customerId);
-        if (isNaN(numericCustomerId) || numericCustomerId < 100 || numericCustomerId > 10000) {
-            return res.status(400).json({ message: 'Customer ID must be a number between 100 and 10000.' });
-        }
-        // Check uniqueness against other sales records
-        const existingSale = await Sale.findOne({ customerId, _id: { $ne: req.params.id } });
-        if (existingSale) {
-            return res.status(409).json({ message: `Customer ID ${customerId} already exists.` });
-        }
-        sale.customerId = customerId;
-    }
-
-
-    await sale.save();
-    res.status(200).json(sale);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
-  }
+    if (!sale) return res.status(404).json({ message: "No history found" });
+    res.json(sale);
+  } catch (error) { res.status(500).json({ message: "Server Error" }); }
 };

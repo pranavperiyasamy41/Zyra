@@ -1,91 +1,139 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import apiClient from '../api';
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import apiClient from '../api';
+import { GoogleLogin } from '@react-oauth/google';
 
-const LoginPage = () => {
+const Login: React.FC = () => {
   const [emailOrUsername, setEmailOrUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // 1. STANDARD LOGIN
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("🔵 Attempting Standard Login...");
     setLoading(true);
-    setError(null);
+    setError('');
+
     try {
-      const response = await apiClient.post('/auth/login', {
-        emailOrUsername,
-        password,
+      const res = await apiClient.post('/auth/login', { emailOrUsername, password });
+      console.log("✅ Backend Responded:", res.data);
+
+      if (res.data.token) {
+        console.log("🔐 Token found. Logging in...");
+        login(res.data.token, res.data.user);
+        
+        console.log("🚀 Navigating to Dashboard...");
+        navigate('/dashboard');
+      } else {
+        console.error("❌ No token in response!");
+        setError("Login succeeded but no token received.");
+      }
+    } catch (err: any) {
+      console.error("❌ Login Error:", err);
+      setError(err.response?.data?.message || 'Login failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 2. GOOGLE LOGIN
+  const handleGoogleSuccess = async (credentialResponse: any) => {
+    console.log("🔵 Google Popup Finished. Token:", credentialResponse.credential);
+    try {
+      const res = await apiClient.post('/auth/google', {
+        token: credentialResponse.credential
       });
-      const { token, user } = response.data;
-      login(token, user);
-      console.log('Login successful, user:', user);
+      console.log("✅ Google Backend Success:", res.data);
+      
+      login(res.data.token, res.data.user);
+      console.log("🚀 Navigating to Dashboard...");
       navigate('/dashboard');
     } catch (err: any) {
-      setLoading(false);
-      if (err.response && err.response.data) {
-        setError(err.response.data.message);
-      } else {
-        setError('Login failed. Please try again.');
-      }
+      console.error("❌ Google Backend Error:", err);
+      console.log("Error Details:", err.response?.data);
+      setError("Google Login Failed. Check Console.");
     }
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-100">
-      <div className="w-full max-w-md rounded-lg bg-white p-8 shadow-lg">
-        <h2 className="mb-6 text-center text-3xl font-bold text-gray-900">
-          Login to Your Pharmacy
-        </h2>
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label htmlFor="emailOrUsername" className="block text-sm font-medium text-gray-700">
-              Email or Username
-            </label>
-            <input
-              id="emailOrUsername" type="text" value={emailOrUsername} onChange={(e) => setEmailOrUsername(e.target.value)} required
-              className="mt-1 block w-full rounded-md border border-gray-300 focus:border-blue-500 focus:ring-blue-500 sm:text-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white"
-            />
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-900">
+      <div className="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-100 dark:border-slate-700">
+        
+        <h2 className="text-3xl font-black text-center text-gray-900 dark:text-white mb-2">Welcome Back</h2>
+        <p className="text-center text-gray-500 mb-8">Login to manage your pharmacy</p>
+
+        {/* GOOGLE BUTTON */}
+        <div className="flex justify-center mb-6">
+          <GoogleLogin
+            onSuccess={handleGoogleSuccess}
+            onError={() => {
+              console.error("❌ Google Button Error (Popup Failed)");
+              setError("Google Login Failed");
+            }}
+            theme="filled_blue"
+            shape="pill"
+            width="100%"
+          />
+        </div>
+
+        <div className="relative flex py-2 items-center mb-6">
+          <div className="flex-grow border-t border-gray-200 dark:border-slate-700"></div>
+          <span className="flex-shrink mx-4 text-gray-400 text-sm">OR</span>
+          <div className="flex-grow border-t border-gray-200 dark:border-slate-700"></div>
+        </div>
+
+        {error && (
+          <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm font-bold text-center border border-red-200">
+            {error}
           </div>
-          <div className="mb-6">
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-              Password
-            </label>
-            <input
-              id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required
-              className="mt-1 block w-full rounded-md border border-gray-300 focus:border-blue-500 focus:ring-blue-500 sm:text-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white"
-            />
-            <div className="text-right mt-1">
-              <a href="/forgot-password" className="text-sm font-medium text-blue-600 hover:text-blue-500">
-                Forgot password?
-              </a>
-            </div>
-          </div>
-          {error && (
-            <div className="mb-4 rounded-md bg-red-50 p-4">
-              <p className="text-sm font-medium text-red-700">{error}</p>
-            </div>
-          )}
+        )}
+
+        <form onSubmit={handleLogin} className="space-y-4">
           <div>
-            <button
-              type="submit" disabled={loading}
-              className="flex w-full justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-blue-400"
-            >
-              {loading ? 'Logging in...' : 'Login'}
-            </button>
+            <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Email or Username</label>
+            <input
+              type="text"
+              className="w-full p-3 rounded-xl border bg-gray-50 dark:bg-slate-900 dark:border-slate-600 dark:text-white focus:ring-2 focus:ring-blue-600 outline-none"
+              value={emailOrUsername}
+              onChange={(e) => setEmailOrUsername(e.target.value)}
+              required
+            />
           </div>
+
+          <div>
+            <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Password</label>
+            <input
+              type="password"
+              className="w-full p-3 rounded-xl border bg-gray-50 dark:bg-slate-900 dark:border-slate-600 dark:text-white focus:ring-2 focus:ring-blue-600 outline-none"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-all disabled:opacity-50 mt-2"
+          >
+            {loading ? 'Logging in...' : 'Login'}
+          </button>
         </form>
-        <p className="mt-6 text-center text-sm text-gray-600">
+
+        <p className="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
           Don't have an account?{' '}
-          <a href="/register" className="font-medium text-blue-600 hover:text-blue-500">
+          <Link to="/register" className="text-blue-600 font-bold hover:underline">
             Sign up here
-          </a>
-        </p> 
+          </Link>
+        </p>
       </div>
     </div>
   );
 };
-export default LoginPage;
+
+export default Login;

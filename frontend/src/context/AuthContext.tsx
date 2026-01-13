@@ -2,55 +2,56 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import apiClient from '../api';
 
 interface User {
-  id: string;
+  _id: string;
   username: string;
   email: string;
-  role: 'user' | 'admin' | 'superadmin';
-  pharmacyName: string; 
-  isApproved: boolean;
+  pharmacyName: string;
+  role: string;
 }
 
 interface AuthContextType {
-  token: string | null;
   user: User | null;
-  login: (token: string, user: User) => void;
+  login: (token: string, userData: User) => void;
   logout: () => void;
+  isAuthenticated: boolean;
+  loading: boolean;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType | null>(null);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
-  const [user, setUser] = useState<User | null>(() => {
-    const savedUser = localStorage.getItem('user');
-    try { return savedUser ? JSON.parse(savedUser) : null; } catch { return null; }
-  });
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (token) {
+    // Check if user is already logged in (Persistent Session)
+    const storedUser = localStorage.getItem('user');
+    const token = localStorage.getItem('token');
+
+    if (storedUser && token) {
+      setUser(JSON.parse(storedUser));
       apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     }
-  }, [token]);
+    setLoading(false);
+  }, []);
 
-  const login = (newToken: string, newUser: User) => {
-    setToken(newToken);
-    setUser(newUser);
-    localStorage.setItem('token', newToken);
-    localStorage.setItem('user', JSON.stringify(newUser));
-    apiClient.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+  const login = (token: string, userData: User) => {
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(userData));
+    apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    setUser(userData);
   };
 
   const logout = () => {
-    setToken(null);
-    setUser(null);
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     delete apiClient.defaults.headers.common['Authorization'];
+    setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ token, user, login, logout }}>
-      {children}
+    <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user, loading }}>
+      {!loading && children}
     </AuthContext.Provider>
   );
 };

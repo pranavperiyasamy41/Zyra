@@ -1,98 +1,135 @@
-import { useState } from 'react';
-import { useNotes, type Note } from '../hooks/useNotes';
+import React, { useState } from 'react';
+import useSWR from 'swr';
+import apiClient from '../api';
 
-const NotesPage = () => {
-  const { notes, isLoading, createNote, deleteNote } = useNotes();
-  const [newNote, setNewNote] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+interface Note {
+  _id: string;
+  title: string;
+  content: string;
+  color: string;
+  createdAt: string;
+}
 
-  const handleSubmit = async (e: React.FormEvent) => {
+const fetcher = (url: string) => apiClient.get(url).then(res => res.data);
+
+const NotesPage: React.FC = () => {
+  const { data: notes = [], mutate } = useSWR<Note[]>('/notes', fetcher);
+  
+  const [newNote, setNewNote] = useState({ title: '', content: '', color: 'bg-yellow-100' });
+  const [isFormOpen, setIsFormOpen] = useState(false);
+
+  // Available Colors for Sticky Notes
+  const colors = [
+    { name: 'Yellow', val: 'bg-yellow-100' },
+    { name: 'Blue', val: 'bg-blue-100' },
+    { name: 'Green', val: 'bg-green-100' },
+    { name: 'Pink', val: 'bg-pink-100' },
+    { name: 'Purple', val: 'bg-purple-100' },
+  ];
+
+  const handleAddNote = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newNote.trim()) return;
+    if (!newNote.title) return;
 
-    setLoading(true);
-    setError(null);
     try {
-      await createNote(newNote);
-      setNewNote('');
+      await apiClient.post('/notes', newNote);
+      setNewNote({ title: '', content: '', color: 'bg-yellow-100' }); // Reset
+      setIsFormOpen(false);
+      mutate(); // Refresh list
     } catch (err) {
-      setError('Failed to save note. Please try again.');
+      alert("Failed to save note");
     }
-    setLoading(false);
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this note?')) {
-      return;
-    }
-    try {
-      await deleteNote(id);
-    } catch (err) {
-      setError('Failed to delete note.');
+    if (window.confirm("Trash this note?")) {
+      await apiClient.delete(`/notes/${id}`);
+      mutate();
     }
   };
 
   return (
     <div className="p-8">
-      <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">My Notes</h1>
-
-      {/* --- Add Note Form --- */}
-      <form onSubmit={handleSubmit} className="mb-8">
-        <div className="rounded-lg bg-white p-6 shadow dark:bg-slate-800 dark:border dark:border-slate-700">
-          <label htmlFor="note" className="block text-sm font-medium text-gray-700 dark:text-slate-300">
-            Add a new note
-          </label>
-          <textarea
-            id="note"
-            rows={4}
-            value={newNote}
-            onChange={(e) => setNewNote(e.target.value)}
-            className="mt-1 block w-full rounded-md border-gray-300 dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:placeholder-slate-400"
-            placeholder="E.g., Remember to order more Vitamin C..."
-          />
-          {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
-          <div className="mt-4 text-right">
-            <button
-              type="submit"
-              disabled={loading}
-              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:bg-blue-400 dark:bg-blue-700 dark:hover:bg-blue-600"
-            >
-              {loading ? 'Saving...' : 'Save Note'}
-            </button>
-          </div>
+      <div className="flex justify-between items-end mb-8">
+        <div>
+          <h1 className="text-3xl font-black text-gray-900 dark:text-white uppercase tracking-tight">Manager's Notebook</h1>
+          <p className="text-gray-500">Reminders & To-Do List</p>
         </div>
-      </form>
+        <button 
+          onClick={() => setIsFormOpen(!isFormOpen)}
+          className="bg-gray-900 text-white px-6 py-2 rounded-lg font-bold hover:bg-gray-800 transition-all shadow-lg"
+        >
+          {isFormOpen ? 'Close Editor' : '+ New Note'}
+        </button>
+      </div>
 
-      {/* --- Notes List --- */}
-      <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">Saved Notes</h2>
-      <div className="space-y-4">
-        {isLoading ? (
-          <p className="dark:text-slate-300">Loading notes...</p>
-        ) : notes && notes.length > 0 ? (
-          // 1. ADDED INDEX TO MAP
-          notes.map((note: Note, index: number) => (
-            <div key={note._id} className="rounded-lg bg-white p-5 shadow dark:bg-slate-800 dark:border dark:border-slate-700 flex justify-between items-start">
-              <div className="flex-1">
-                {/* 2. ADDED S.NO. BADGE */}
-                <span className="mb-2 inline-flex items-center rounded-full bg-blue-100 px-3 py-0.5 text-sm font-medium text-blue-800 dark:bg-blue-900 dark:text-blue-300">
-                  Note #{index + 1}
-                </span>
-                <p className="text-gray-800 dark:text-slate-200 mt-2">{note.content}</p>
-                <p className="mt-2 text-xs text-gray-500 dark:text-slate-400">
-                  Created: {new Date(note.createdAt).toLocaleString()}
-                </p>
+      {/* 📝 Quick Add Form (Collapsible) */}
+      {isFormOpen && (
+        <div className="mb-8 bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-xl border border-gray-100 dark:border-slate-700 animate-fadeIn">
+          <form onSubmit={handleAddNote}>
+            <div className="flex flex-col gap-4">
+              <input 
+                type="text" 
+                placeholder="Title (e.g., Call Supplier)" 
+                className="text-lg font-bold p-2 border-b-2 border-gray-200 dark:bg-slate-800 dark:text-white dark:border-slate-600 outline-none focus:border-blue-500"
+                value={newNote.title}
+                onChange={e => setNewNote({...newNote, title: e.target.value})}
+                autoFocus
+              />
+              <textarea 
+                placeholder="Details..." 
+                className="w-full p-3 rounded bg-gray-50 dark:bg-slate-900 dark:text-gray-300 outline-none resize-none h-24"
+                value={newNote.content}
+                onChange={e => setNewNote({...newNote, content: e.target.value})}
+              />
+              
+              <div className="flex justify-between items-center">
+                <div className="flex gap-2">
+                  {colors.map(c => (
+                    <button
+                      key={c.val}
+                      type="button"
+                      onClick={() => setNewNote({...newNote, color: c.val})}
+                      className={`w-8 h-8 rounded-full border-2 ${c.val} ${newNote.color === c.val ? 'border-gray-500 scale-110' : 'border-transparent'}`}
+                      title={c.name}
+                    />
+                  ))}
+                </div>
+                <button type="submit" className="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-blue-700">
+                  Save Note
+                </button>
               </div>
-              <button
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* 📌 Sticky Notes Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        {notes.length > 0 ? notes.map(note => (
+          <div key={note._id} className={`${note.color} p-6 rounded-xl shadow-md hover:shadow-xl transition-all transform hover:-translate-y-1 relative group min-h-[200px] flex flex-col`}>
+            <div className="flex justify-between items-start mb-2">
+              <h3 className="font-black text-gray-800 text-lg leading-tight">{note.title}</h3>
+              <button 
                 onClick={() => handleDelete(note._id)}
-                className="ml-4 rounded-md bg-red-100 px-3 py-1 text-sm font-medium text-red-700 hover:bg-red-200 dark:bg-red-900/50 dark:text-red-300 dark:hover:bg-red-900"
+                className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-600 font-bold transition-opacity"
               >
-                Delete
+                ✕
               </button>
             </div>
-          ))
-        ) : (
-          <p className="text-gray-500 dark:text-slate-400">You don't have any notes yet.</p>
+            <p className="text-gray-700 text-sm whitespace-pre-wrap flex-1">{note.content}</p>
+            <p className="text-[10px] text-gray-500 mt-4 font-mono text-right">
+              {new Date(note.createdAt).toLocaleDateString()}
+            </p>
+          </div>
+        )) : (
+          !isFormOpen && (
+            <div className="col-span-full text-center py-20 opacity-50">
+              <p className="text-4xl mb-2">📝</p>
+              <p className="text-gray-500">Your desk is clear.</p>
+              <p className="text-sm text-gray-400">Click "+ New Note" to add a reminder.</p>
+            </div>
+          )
         )}
       </div>
     </div>

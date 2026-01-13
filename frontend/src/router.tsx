@@ -1,34 +1,60 @@
-import { createBrowserRouter, Outlet, Navigate } from 'react-router-dom';
-import App from './App';
-import ProtectedRoute from './components/ProtectedRoute';
-import Root from './pages/Root';
-import LandingPage from './pages/LandingPage';
-import LoginPage from './pages/Login';
-import RegisterPage from './pages/Register';
-import ForgotPasswordPage from './pages/ForgotPassword';
+import { createBrowserRouter } from 'react-router-dom';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import DashboardWrapper from './pages/DashboardWrapper';
+import DashboardPage from './pages/Dashboard';
 import InventoryPage from './pages/InventoryPage';
 import SalesPage from './pages/SalesPage';
 import NotesPage from './pages/NotesPage';
-import AdminUsersPage from './pages/AdminUsersPage';
-import AdminLoginPage from './pages/AdminLoginPage';
-import DashboardWrapper from './pages/DashboardWrapper';
+import SettingsPage from './pages/SettingsPage';
+import LandingPage from './pages/LandingPage';
+import ProtectedRoute from './components/ProtectedRoute'; 
 
-export const router = createBrowserRouter([
+// ✅ IMPORT ADMIN PAGES
+import AdminLoginPage from './pages/AdminLoginPage';
+import AdminDashboard from './pages/AdminDashboard'; 
+// import AdminUsersPage from './pages/AdminUsersPage'; // Uncomment if you have this file
+
+const router = createBrowserRouter([
+  // --- PUBLIC ROUTES ---
   {
     path: '/',
-    element: <Root />,
+    element: <LandingPage />, 
   },
+  {
+    path: '/login',
+    element: <Login />,
+  },
+  {
+    path: '/register',
+    element: <Register />,
+  },
+  
+  // ✅ ADMIN ROUTES (Added this section)
+  {
+    path: '/admin-login',
+    element: <AdminLoginPage />,
+  },
+  {
+    path: '/admin-dashboard',
+    element: (
+      // You can add an AdminProtected route wrapper here later for security
+      <AdminDashboard />
+    ),
+  },
+
+  // --- USER DASHBOARD ROUTES ---
   {
     path: '/dashboard',
     element: (
       <ProtectedRoute>
-        <App /> 
+        <DashboardWrapper />
       </ProtectedRoute>
     ),
     children: [
       {
-        index: true, // This is the ONLY index route
-        element: <DashboardWrapper />, 
+        index: true, 
+        element: <DashboardPage />,
       },
       {
         path: 'inventory',
@@ -43,20 +69,11 @@ export const router = createBrowserRouter([
         element: <NotesPage />,
       },
       {
-        path: 'admin/users',
-        element: <AdminUsersPage />,
+        path: 'settings',
+        element: <SettingsPage />,
       },
     ],
   },
-  {
-    element: <Outlet />,
-    children: [
-      { path: '/landing', element: <LandingPage /> },
-      { path: '/login', element: <LoginPage /> },
-      { path: '/register', element: <RegisterPage /> },
-      { path: '/forgot-password', element: <ForgotPasswordPage /> },
-      { path: '/admin-login', element: <AdminLoginPage /> },
-      { path: '*', element: <Navigate to="/landing" replace /> },
-    ],
-  },
 ]);
+
+export default router;

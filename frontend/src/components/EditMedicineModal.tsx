@@ -1,120 +1,128 @@
-import { useState, useEffect } from 'react';
-import { useAllMedicines, type Medicine } from '../hooks/useMedicines';
+import React, { useState, useEffect } from 'react';
 import apiClient from '../api';
+
+// Define the shape of Medicine expected here
+interface Medicine {
+  _id: string;
+  name: string;
+  quantity: number;
+  price?: number;
+  mrp?: number;
+  expiryDate: string;
+}
 
 interface EditMedicineModalProps {
   isOpen: boolean;
   onClose: () => void;
-  medicine: Medicine | null;
+  medicine: Medicine | null; // ✅ Accepts the full object or null
+  onSuccess: () => void;     // ✅ Added callback
 }
 
-const formatToISODate = (dateString: string) => {
-  if (!dateString) return '';
-  return dateString.split('T')[0];
-};
-
-const EditMedicineModal: React.FC<EditMedicineModalProps> = ({ isOpen, onClose, medicine }) => {
-  const [formData, setFormData] = useState<Partial<Medicine>>({});
-  const [error, setError] = useState<string | null>(null);
+const EditMedicineModal: React.FC<EditMedicineModalProps> = ({ isOpen, onClose, medicine, onSuccess }) => {
+  const [formData, setFormData] = useState({
+    name: '',
+    quantity: 0,
+    price: 0,
+    expiryDate: ''
+  });
   const [loading, setLoading] = useState(false);
-  const { mutate } = useAllMedicines();
 
+  // Load medicine data when modal opens
   useEffect(() => {
     if (medicine) {
       setFormData({
-        ...medicine,
-        expiryDate: formatToISODate(medicine.expiryDate),
+        name: medicine.name,
+        quantity: medicine.quantity,
+        price: medicine.price || medicine.mrp || 0,
+        // Format date to YYYY-MM-DD for input field
+        expiryDate: medicine.expiryDate ? new Date(medicine.expiryDate).toISOString().split('T')[0] : ''
       });
     }
-  }, [medicine, isOpen]);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-  };
+  }, [medicine]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError(null);
     if (!medicine) return;
+    setLoading(true);
+
     try {
-      await apiClient.put(`/medicines/${medicine._id}`, formData);
-      mutate();
-      setLoading(false);
+      await apiClient.put(`/medicines/${medicine._id}`, {
+        name: formData.name,
+        quantity: Number(formData.quantity),
+        price: Number(formData.price),
+        expiryDate: formData.expiryDate
+      });
+      
+      alert('✅ Medicine Updated!');
+      onSuccess(); // ✅ Trigger Refresh
       onClose();
-    } catch (err: any) {
+    } catch (error) {
+      alert('Failed to update medicine');
+    } finally {
       setLoading(false);
-      setError(err.response?.data?.message || 'Failed to update medicine');
     }
   };
 
   if (!isOpen || !medicine) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="w-full max-w-lg rounded-lg bg-white p-8 shadow-lg dark:bg-slate-800 dark:border dark:border-slate-700">
-        <h2 className="mb-6 text-2xl font-bold dark:text-white">Edit {medicine.name}</h2>
-        
-        <form onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300">Name</label>
-              <input
-                type="text" name="name" value={formData.name || ''} onChange={handleChange} required
-                className="mt-1 block w-full rounded-md border-gray-300 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-md p-6">
+        <h2 className="text-xl font-bold mb-4 dark:text-white">Edit Medicine</h2>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          
+          <div>
+            <label className="text-xs font-bold text-gray-500 uppercase">Name</label>
+            <input 
+              className="w-full p-3 border rounded mt-1 dark:bg-slate-700 dark:text-white dark:border-slate-600" 
+              required
+              value={formData.name}
+              onChange={e => setFormData({...formData, name: e.target.value})}
+            />
+          </div>
+
+          <div className="flex gap-4">
+            <div className="w-1/2">
+              <label className="text-xs font-bold text-gray-500 uppercase">Quantity</label>
+              <input 
+                type="number" 
+                className="w-full p-3 border rounded mt-1 dark:bg-slate-700 dark:text-white dark:border-slate-600" 
+                required
+                value={formData.quantity}
+                onChange={e => setFormData({...formData, quantity: parseInt(e.target.value) || 0})}
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300">Batch ID</label>
-              <input
-                type="text" name="batchId" value={formData.batchId || ''} onChange={handleChange} required
-                className="mt-1 block w-full rounded-md border-gray-300 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300">Quantity</label>
-              <input
-                type="number" name="quantity" value={formData.quantity || ''} onChange={handleChange} required
-                className="mt-1 block w-full rounded-md border-gray-300 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300">MRP</label>
-              <input
-                type="number" step="0.01" name="mrp" value={formData.mrp || ''} onChange={handleChange} required
-                className="mt-1 block w-full rounded-md border-gray-300 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300">Expiry Date</label>
-              <input
-                type="date" name="expiryDate" value={formData.expiryDate || ''} onChange={handleChange} required
-                className="mt-1 block w-full rounded-md border-gray-300 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+            <div className="w-1/2">
+              <label className="text-xs font-bold text-gray-500 uppercase">Price ($)</label>
+              <input 
+                type="number" 
+                className="w-full p-3 border rounded mt-1 dark:bg-slate-700 dark:text-white dark:border-slate-600" 
+                required
+                value={formData.price}
+                onChange={e => setFormData({...formData, price: parseFloat(e.target.value) || 0})}
               />
             </div>
           </div>
 
-          {error && (
-            <p className="mt-4 text-sm text-red-600">{error}</p>
-          )}
+          <div>
+            <label className="text-xs font-bold text-gray-500 uppercase">Expiry Date</label>
+            <input 
+              type="date" 
+              className="w-full p-3 border rounded mt-1 dark:bg-slate-700 dark:text-white dark:border-slate-600" 
+              required
+              value={formData.expiryDate}
+              onChange={e => setFormData({...formData, expiryDate: e.target.value})}
+            />
+          </div>
 
-          <div className="mt-6 flex justify-end space-x-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600 dark:hover:bg-slate-600"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
+          <div className="flex justify-end gap-3 mt-4">
+            <button type="button" onClick={onClose} className="px-4 py-2 text-gray-500 hover:text-gray-700 dark:text-gray-300">Cancel</button>
+            <button 
+              type="submit" 
               disabled={loading}
-              className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:bg-blue-400 dark:bg-blue-700 dark:hover:bg-blue-600"
+              className="bg-emerald-600 text-white px-6 py-2 rounded font-bold hover:bg-emerald-700 disabled:opacity-50"
             >
-              {loading ? 'Saving...' : 'Save Changes'}
+              {loading ? 'Saving...' : 'Update'}
             </button>
           </div>
         </form>
@@ -122,4 +130,5 @@ const EditMedicineModal: React.FC<EditMedicineModalProps> = ({ isOpen, onClose, 
     </div>
   );
 };
+
 export default EditMedicineModal;

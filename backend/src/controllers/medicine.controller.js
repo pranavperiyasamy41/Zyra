@@ -1,183 +1,137 @@
 import Medicine from '../models/medicine.model.js';
 
-// @desc    Add a new medicine batch
-// @route   POST /api/medicines
-// @access  Private
+// ==============================
+// 1. ADD MEDICINE (✅ Fixed Validation Error)
+// ==============================
 export const addMedicine = async (req, res) => {
   try {
-    // 1. Get all the data from the request body
-    const { name, batchId, quantity, mrp, expiryDate } = req.body;
+    const { name, stock, price, expiryDate } = req.body;
 
-    // 2. Basic validation
-    if (!name || !batchId || !quantity || !mrp || !expiryDate) {
-      return res.status(400).json({ message: 'All fields are required' });
+    if (!name || !stock || !price || !expiryDate) {
+      return res.status(400).json({ message: "All fields are required" });
     }
 
-    // 3. Create a new medicine document
-    const medicine = new Medicine({
+    const newMedicine = new Medicine({
+      user: req.user._id,
       name,
-      batchId,
-      quantity,
-      mrp,
+      stock,
+      quantity: stock, 
+      price,
       expiryDate,
-      user: req.user.id, // <-- This is the crucial link to the logged-in user
+      category: "General",
+      // 🟢 AUTO-FILL MISSING FIELDS
+      // Since the UI doesn't have these inputs yet, we generate defaults
+      mrp: price, // Default MRP to the selling price
+      batchId: `BATCH-${Date.now()}` // Auto-generate a unique Batch ID
     });
 
-    // 4. Save it to the database
-    const createdMedicine = await medicine.save();
-    res.status(201).json(createdMedicine);
+    const savedMedicine = await newMedicine.save();
+    res.status(201).json(savedMedicine);
 
   } catch (error) {
-    // Check for our 'unique' index error
-    if (error.code === 11000) {
-      return res.status(409).json({ message: 'Error: A medicine with this Batch ID already exists.' });
-    }
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Add Medicine Error:", error);
+    // Send the specific error message from Mongoose to the frontend
+    res.status(400).json({ message: error.message || "Server Error" });
   }
 };
 
-// @desc    Get all medicines for the logged-in user
-// @route   GET /api/medicines
-// @access  Private
+// ==============================
+// 2. GET ALL MEDICINES
+// ==============================
 export const getMedicines = async (req, res) => {
   try {
-    let query = { user: req.user.id };
-
-    // If the person logged in is an Admin, they should see ALL medicines
-    if (req.user.role === 'admin' || req.user.role === 'superadmin') {
-      query = {}; // Empty query means "Find All"
-    }
-
-    const medicines = await Medicine.find(query);
-    res.status(200).json(medicines);
+    const medicines = await Medicine.find({ user: req.user._id });
+    res.json(medicines);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching inventory' });
+    res.status(500).json({ message: "Server Error" });
   }
 };
 
+// ==============================
+// 3. UPDATE MEDICINE
+// ==============================
 export const updateMedicine = async (req, res) => {
   try {
-    // 1. Get the new data from the body
-    const { name, batchId, quantity, mrp, expiryDate, lowStockThreshold } = req.body;
-    
-    // 2. Find the medicine by its ID
-    const medicine = await Medicine.findById(req.params.id);
+    const { id } = req.params;
+    const medicine = await Medicine.findById(id);
 
-    // 3. Check if the medicine exists
-    if (!medicine) {
-      return res.status(404).json({ message: 'Medicine not found' });
+    if (!medicine) return res.status(404).json({ message: "Medicine not found" });
+
+    if (medicine.user.toString() !== req.user._id.toString()) {
+      return res.status(401).json({ message: "Not authorized" });
     }
 
-    // 4. CRITICAL: Check if this medicine belongs to the logged-in user
-    if (medicine.user.toString() !== req.user.id) {
-      return res.status(401).json({ message: 'Not authorized' });
-    }
-
-    // 5. Update the fields
-    medicine.name = name || medicine.name;
-    medicine.batchId = batchId || medicine.batchId;
-    medicine.quantity = quantity !== undefined ? quantity : medicine.quantity;
-    medicine.mrp = mrp || medicine.mrp;
-    medicine.expiryDate = expiryDate || medicine.expiryDate;
-    medicine.lowStockThreshold = lowStockThreshold || medicine.lowStockThreshold;
-
-    // 6. Save the updated document
-    const updatedMedicine = await medicine.save();
-    res.status(200).json(updatedMedicine);
-
+    const updatedMedicine = await Medicine.findByIdAndUpdate(id, req.body, { new: true });
+    res.json(updatedMedicine);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: "Server Error" });
   }
 };
 
-// @desc    Delete a medicine batch
-// @route   DELETE /api/medicines/:id
-// @access  Private
+// ==============================
+// 4. DELETE MEDICINE
+// ==============================
 export const deleteMedicine = async (req, res) => {
   try {
-    // 1. Find the medicine by its ID
     const medicine = await Medicine.findById(req.params.id);
 
-    // 2. Check if it exists
-    if (!medicine) {
-      return res.status(404).json({ message: 'Medicine not found' });
+    if (!medicine) return res.status(404).json({ message: "Medicine not found" });
+
+    if (medicine.user.toString() !== req.user._id.toString()) {
+      return res.status(401).json({ message: "Not authorized" });
     }
 
-    // 3. CRITICAL: Check if this medicine belongs to the logged-in user
-    if (medicine.user.toString() !== req.user.id) {
-      return res.status(401).json({ message: 'Not authorized' });
-    }
-
-    // 4. Delete it
-    await medicine.deleteOne(); // Use deleteOne()
-    res.status(200).json({ message: 'Medicine removed' });
-
+    await medicine.deleteOne();
+    res.json({ message: "Medicine removed" });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: "Server Error" });
   }
 };
-// @desc    Get all medicines below their low stock threshold
-// @route   GET /api/medicines/alerts/low-stock
-// @access  Private
+
+// ==============================
+// 5. GET LOW STOCK ALERTS
+// ==============================
 export const getLowStockAlerts = async (req, res) => {
   try {
-    // 1. Find medicines where quantity is less than or equal to the threshold
-    // We use $expr to compare two fields in the same document
-    const lowStockItems = await Medicine.find({ 
-      user: req.user.id,
-      $expr: { $lte: ["$quantity", "$lowStockThreshold"] } 
-    }).sort({ quantity: 1 }); // Show lowest quantity first
-
-    // 2. Send them back
-    res.status(200).json(lowStockItems);
-
+    const lowStockMedicines = await Medicine.find({
+      user: req.user._id,
+      stock: { $lte: 10, $gt: 0 } 
+    });
+    res.json(lowStockMedicines);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: "Server Error" });
   }
 };
 
-// @desc    Get all medicines nearing expiry
-// @route   GET /api/medicines/alerts/expiry
-// @access  Private
+// ==============================
+// 6. GET EXPIRY ALERTS
+// ==============================
 export const getExpiryAlerts = async (req, res) => {
   try {
-    const today = new Date();
-    // Calculate the date 90 days from now
-    const next90Days = new Date(today.setDate(today.getDate() + 90));
+    const thirtyDaysFromNow = new Date();
+    thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
 
-    // 1. Find medicines that are...
-    const expiringItems = await Medicine.find({
-      user: req.user.id, // ...for this user
-      expiryDate: { 
-        $lte: next90Days // ...expiring within the next 90 days
-      }
-    }).sort({ expiryDate: 1 }); // Show soonest-to-expire first
-
-    // 2. Send them back
-    res.status(200).json(expiringItems);
-
+    const expiringMedicines = await Medicine.find({
+      user: req.user._id,
+      expiryDate: { $lt: thirtyDaysFromNow, $gt: new Date() }
+    });
+    res.json(expiringMedicines);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: "Server Error" });
   }
 };
 
-// @desc    Get all medicines that are out of stock (quantity = 0)
-// @route   GET /api/medicines/alerts/out-of-stock
-// @access  Private
+// ==============================
+// 7. GET OUT OF STOCK ALERTS
+// ==============================
 export const getOutOfStockAlerts = async (req, res) => {
   try {
-    const outOfStockItems = await Medicine.find({ 
-      user: req.user.id,
-      quantity: 0 
+    const outOfStockMedicines = await Medicine.find({
+      user: req.user._id,
+      stock: { $lte: 0 }
     });
-    res.status(200).json(outOfStockItems);
+    res.json(outOfStockMedicines);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: "Server Error" });
   }
 };

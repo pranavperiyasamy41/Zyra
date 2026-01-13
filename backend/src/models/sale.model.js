@@ -1,57 +1,33 @@
 import mongoose from 'mongoose';
 
-const saleItemSchema = new mongoose.Schema({
-  medicine: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Medicine',
-    required: true,
+const SaleSchema = new mongoose.Schema({
+  user: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'User', 
+    required: true 
   },
-  medicineName: { // <-- We are saving the name as a string here
+  customerName: { 
     type: String, 
-    required: true,
+    default: 'Guest' 
   },
-  quantitySold: {
-    type: Number,
-    required: true,
+  customerMobile: { 
+    type: String, 
+    default: '' 
   },
-  pricePerUnit: { // The price it was sold at
-    type: Number,
-    required: true,
+  items: [{
+    medicineId: { type: mongoose.Schema.Types.ObjectId, ref: 'Medicine' },
+    name: { type: String, required: true },
+    quantity: { type: Number, required: true },
+    price: { type: Number, required: true }
+  }],
+  totalAmount: { 
+    type: Number, 
+    required: true 
   },
+  createdAt: { 
+    type: Date, 
+    default: Date.now 
+  }
 });
 
-const saleSchema = new mongoose.Schema(
-  {
-    user: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: true,
-    },
-    itemsSold: [saleItemSchema], // An array of items in this one sale
-    totalAmount: {
-      type: Number,
-      required: true,
-    },
-    saleDate: {
-      type: Date,
-      default: Date.now,
-    },
-    customerName: {
-      type: String,
-      default: 'N/A',
-    },
-    customerPhone: {
-      type: String,
-    },
-    customerId: {
-      type: String,
-      required: true,
-    },
-  },
-  {
-    timestamps: true,
-  }
-);
-
-const Sale = mongoose.model('Sale', saleSchema);
-export default Sale;
+export default mongoose.model('Sale', SaleSchema);

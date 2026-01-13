@@ -1,117 +1,98 @@
-import { useState } from 'react';
-import { useAllMedicines } from '../hooks/useMedicines';
+import React, { useState } from 'react';
 import apiClient from '../api';
 
 interface AddMedicineModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onSuccess: () => void; // ✅ Added this Prop
 }
 
-const AddMedicineModal: React.FC<AddMedicineModalProps> = ({ isOpen, onClose }) => {
-  const [name, setName] = useState('');
-  const [batchId, setBatchId] = useState('');
-  const [quantity, setQuantity] = useState('');
-  const [mrp, setMrp] = useState('');
-  const [expiryDate, setExpiryDate] = useState('');
-  const [error, setError] = useState<string | null>(null);
+const AddMedicineModal: React.FC<AddMedicineModalProps> = ({ isOpen, onClose, onSuccess }) => {
+  const [formData, setFormData] = useState({
+    name: '',
+    quantity: '',
+    price: '',
+    expiryDate: ''
+  });
   const [loading, setLoading] = useState(false);
-  const { mutate } = useAllMedicines();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError(null);
+
     try {
       await apiClient.post('/medicines', {
-        name, batchId,
-        quantity: Number(quantity),
-        mrp: Number(mrp),
-        expiryDate,
+        name: formData.name,
+        quantity: Number(formData.quantity),
+        price: Number(formData.price),
+        expiryDate: formData.expiryDate
       });
-      mutate();
+      
+      alert('✅ Medicine Added!');
+      setFormData({ name: '', quantity: '', price: '', expiryDate: '' }); // Reset form
+      onSuccess(); // ✅ Trigger the refresh
+      onClose();
+    } catch (error) {
+      alert('Failed to add medicine');
+    } finally {
       setLoading(false);
-      handleClose(); // Call close handler
-    } catch (err: any) {
-      setLoading(false);
-      setError(err.response?.data?.message || 'Failed to add medicine');
     }
   };
-  
-  // Clear form on close
-  const handleClose = () => {
-    setName('');
-    setBatchId('');
-    setQuantity('');
-    setMrp('');
-    setExpiryDate('');
-    setError(null);
-    onClose();
-  }
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="w-full max-w-lg rounded-lg bg-white p-8 shadow-lg dark:bg-slate-800 dark:border dark:border-slate-700">
-        <h2 className="mb-6 text-2xl font-bold dark:text-white">Add New Medicine</h2>
-        
-        <form onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300">Name</label>
-              <input
-                type="text" value={name} onChange={(e) => setName(e.target.value)} required
-                className="mt-1 block w-full rounded-md border-gray-300 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300">Batch ID</label>
-              <input
-                type="text" value={batchId} onChange={(e) => setBatchId(e.target.value)} required
-                className="mt-1 block w-full rounded-md border-gray-300 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300">Quantity</label>
-              <input
-                type="number" value={quantity} onChange={(e) => setQuantity(e.target.value)} required
-                className="mt-1 block w-full rounded-md border-gray-300 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300">MRP</label>
-              <input
-                type="number" step="0.01" value={mrp} onChange={(e) => setMrp(e.target.value)} required
-                className="mt-1 block w-full rounded-md border-gray-300 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300">Expiry Date</label>
-              <input
-                type="date" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} required
-                className="mt-1 block w-full rounded-md border-gray-300 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
-              />
-            </div>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-md p-6">
+        <h2 className="text-xl font-bold mb-4 dark:text-white">Add New Stock</h2>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          
+          <input 
+            className="p-3 border rounded dark:bg-slate-700 dark:text-white dark:border-slate-600" 
+            placeholder="Medicine Name" 
+            required
+            value={formData.name}
+            onChange={e => setFormData({...formData, name: e.target.value})}
+          />
+
+          <div className="flex gap-4">
+            <input 
+              type="number" 
+              className="p-3 border rounded w-1/2 dark:bg-slate-700 dark:text-white dark:border-slate-600" 
+              placeholder="Quantity" 
+              required
+              value={formData.quantity}
+              onChange={e => setFormData({...formData, quantity: e.target.value})}
+            />
+            <input 
+              type="number" 
+              className="p-3 border rounded w-1/2 dark:bg-slate-700 dark:text-white dark:border-slate-600" 
+              placeholder="Price ($)" 
+              required
+              value={formData.price}
+              onChange={e => setFormData({...formData, price: e.target.value})}
+            />
           </div>
 
-          {error && (
-            <p className="mt-4 text-sm text-red-600">{error}</p>
-          )}
+          <div>
+            <label className="text-xs font-bold text-gray-500 uppercase">Expiry Date</label>
+            <input 
+              type="date" 
+              className="w-full p-3 border rounded mt-1 dark:bg-slate-700 dark:text-white dark:border-slate-600" 
+              required
+              value={formData.expiryDate}
+              onChange={e => setFormData({...formData, expiryDate: e.target.value})}
+            />
+          </div>
 
-          <div className="mt-6 flex justify-end space-x-4">
-            <button
-              type="button"
-              onClick={handleClose}
-              className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600 dark:hover:bg-slate-600"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
+          <div className="flex justify-end gap-3 mt-4">
+            <button type="button" onClick={onClose} className="px-4 py-2 text-gray-500 hover:text-gray-700 dark:text-gray-300">Cancel</button>
+            <button 
+              type="submit" 
               disabled={loading}
-              className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:bg-blue-400 dark:bg-blue-700 dark:hover:bg-blue-600"
+              className="bg-blue-600 text-white px-6 py-2 rounded font-bold hover:bg-blue-700 disabled:opacity-50"
             >
-              {loading ? 'Adding...' : 'Add Medicine'}
+              {loading ? 'Adding...' : 'Save Stock'}
             </button>
           </div>
         </form>
@@ -119,4 +100,5 @@ const AddMedicineModal: React.FC<AddMedicineModalProps> = ({ isOpen, onClose }) 
     </div>
   );
 };
+
 export default AddMedicineModal;

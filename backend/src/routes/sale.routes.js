@@ -1,16 +1,14 @@
 import { Router } from 'express';
-import { recordSale, getSalesHistory, deleteSale, updateSale } from '../controllers/sale.controller.js';
-import protect from '../middleware/auth.middleware.js';
+import { protect } from '../middleware/authMiddleware.js'; 
+import { createSale, getSales, getLastOrder } from '../controllers/sale.controller.js';
 
 const router = Router();
 
 router.route('/')
-  .post(protect, recordSale)
-  .get(protect, getSalesHistory);
+  .post(protect, createSale)
+  .get(protect, getSales);
 
-// --- ADD THESE NEW ROUTES ---
-router.route('/:id')
-  .delete(protect, deleteSale)
-  .put(protect, updateSale);
+// ✅ NEW ROUTE for Rapid Refill
+router.get('/last-order/:mobile', protect, getLastOrder);
 
 export default router;

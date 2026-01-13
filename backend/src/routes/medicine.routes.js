@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import protect from '../middleware/auth.middleware.js'; // <-- This was the missing line
+import { protect } from '../middleware/authMiddleware.js'; // ✅ FIXED: Added { } curly braces
 
-// All your controller functions imported in one block
+// Import all controller functions
 import { 
   addMedicine, 
   getMedicines,

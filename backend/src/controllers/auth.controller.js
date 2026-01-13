@@ -1,254 +1,210 @@
 import User from '../models/user.model.js';
-import jwt from 'jsonwebtoken';
+import Otp from '../models/otp.model.js';
+import sendEmail from '../utils/sendEmail.js';
+import generateToken from '../utils/generateToken.js';
+import { OAuth2Client } from 'google-auth-library';
 import dotenv from 'dotenv';
-import generateToken from '../utils/generateToken.js'; // Ensure this is available
 
 dotenv.config();
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-const passwordError = 'Password must be at least 8 characters long and contain one uppercase, one lowercase, one number, and one special character.';
+// ==========================================
+// 1. EMAIL FLOW: SEND OTP
+// ==========================================
+export const sendOtp = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const existingUser = await User.findOne({ email });
+    if (existingUser) return res.status(400).json({ message: "Email already registered. Please Login." });
 
-// --- NEW FUNCTION 1: Handle Email & Send OTP ---
-export const registerEmail = async (req, res) => {
-  try {
-    const { email } = req.body;
-    if (!email) {
-      return res.status(400).json({ message: 'Email is required' });
-    }
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    await Otp.findOneAndUpdate(
+      { email }, 
+      { email, otp }, 
+      { upsert: true, new: true }
+    );
 
-    // Check if user already exists AND is already approved (verified)
-    const existingUser = await User.findOne({ email, isApproved: true });
-    if (existingUser) {
-      return res.status(409).json({ message: 'Email is already in use' });
-    }
-
-    // --- OTP Generation ---
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-
-    // We use `upsert` to create a new unverified/unapproved user doc 
-    // or update an existing one that is still pending registration.
-    await User.updateOne(
-      { email, emailVerified: false }, // Find by email and where verification is not yet complete
-      { 
-        email, 
-        otp, 
-        otpExpires, 
-        emailVerified: false,
-        isApproved: false, // Ensure new users are set to unapproved
-      },
-      { upsert: true }
-    );
-
-    // --- !!! FOR TESTING !!! ---
-    console.log('===================================');
-    console.log(`OTP for ${email}: ${otp}`);
-    console.log('===================================');
-
-    res.status(200).json({ message: 'OTP sent to your email (check console).' });
-
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
-  }
+    await sendEmail(email, "Verify Your Email", `<h3>Your OTP is: ${otp}</h3>`);
+    res.status(200).json({ message: "OTP Sent" });
+  } catch (error) {
+    res.status(500).json({ message: "Server Error" });
+  }
 };
 
-// --- NEW FUNCTION 2: Verify OTP & Finalize Registration ---
-export const registerVerify = async (req, res) => {
-  try {
-    const { email, otp, username, password, pharmacyName } = req.body; // Added pharmacyName
+// ==========================================
+// 2. EMAIL FLOW: VERIFY OTP (Intermediate Step)
+// ==========================================
+export const verifyOtp = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    const record = await Otp.findOne({ email, otp });
+    
+    if (!record) return res.status(400).json({ message: "Invalid OTP" });
 
-    if (!email || !otp || !username || !password || !pharmacyName) {
-      return res.status(400).json({ message: 'All fields are required' });
-    }
-
-    if (!passwordRegex.test(password)) {
-      return res.status(400).json({ message: passwordError });
-    }
-
-    // Find the temporary user record
-    const user = await User.findOne({ 
-      email, 
-      emailVerified: false 
-    });
-
-    // Check for OTP validity
-    if (!user || user.otp !== otp || user.otpExpires < new Date()) {
-        const message = user?.otpExpires < new Date() ? 'OTP has expired. Please try again.' : 'Invalid OTP or user not found.';
-      return res.status(400).json({ message: message });
-    }
-    
-    // --- Success! Update User Details ---
-    user.username = username;
-    user.pharmacyName = pharmacyName; // Set the pharmacy name
-    user.password = password; // The 'pre-save' hook will hash this
-    user.emailVerified = true;
-    user.isApproved = false; // CRITICAL: Account is still NOT approved by Admin
-    user.otp = undefined; 
-    user.otpExpires = undefined;
-
-    await user.save(); // This will trigger the password hashing
-
-    res.status(201).json({ message: 'User registered successfully! Awaiting Admin Approval to log in.' }); // Updated message
-
-  } catch (error) {
-    // Handle potential duplicate username error
-    if (error.code === 11000) {
-      return res.status(409).json({ message: 'Username is already taken' });
-    }
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
-  }
+    // We don't create user yet. Just say "OK" so frontend can move to next step.
+    res.status(200).json({ message: "OTP Verified", isVerified: true });
+  } catch (error) {
+    res.status(500).json({ message: "Server Error" });
+  }
 };
 
-// --- STANDARD USER LOGIN (NEW: Checks isApproved) ---
-export const loginUser = async (req, res) => {
-    try {
-      const { emailOrUsername, password } = req.body;
-  
-      const user = await User.findOne({
-        $or: [{ email: emailOrUsername }, { username: emailOrUsername }],
-      });
-  
-      if (!user || !(await user.comparePassword(password))) {
-        return res.status(401).json({ message: 'Invalid email/username or password' });
-      }
+// ==========================================
+// 3. FINAL REGISTRATION (WIZARD SUBMISSION)
+// ==========================================
+export const register = async (req, res) => {
+  try {
+    const { 
+      // Auth Info
+      authProvider, googleToken, otp,
+      // User Info
+      fullName, email, mobile, password,
+      // Pharmacy Info
+      pharmacyName, drugLicense, address, city, state, pincode, pharmacyContact
+    } = req.body;
 
-      // --- CRITICAL: CHECK IF USER IS APPROVED ---
-      if (!user.isApproved) {
-        return res.status(403).json({ message: 'Access denied. Account is pending admin approval.' });
-      }
-      // ------------------------------------------
+    // --- SECURITY CHECKS ---
+    if (authProvider === 'google') {
+      // 🛡️ Verify Google Token Integrity
+      const ticket = await client.verifyIdToken({
+        idToken: googleToken,
+        audience: process.env.GOOGLE_CLIENT_ID,
+      });
+      const payload = ticket.getPayload();
+      if (payload.email !== email) return res.status(400).json({ message: "Security Alert: Email mismatch." });
+    } else {
+      // 🛡️ Verify OTP one last time to prevent skipping step
+      const validOtp = await Otp.findOne({ email, otp });
+      if (!validOtp) return res.status(400).json({ message: "Session expired. Please verify OTP again." });
+      await Otp.deleteOne({ email }); // Cleanup
+    }
 
-      // Generate token
-      const token = generateToken(user._id);
-  
-      // Send the token back to the user
-      res.status(200).json({
-      message: 'Login successful!',
-      token: token,
-      user: {
-          id: user._id,
-          username: user.username,
-          email: user.email,
-          role: user.role, 
-      },
-  });
-  
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: 'Server error during login' });
-    }
+    // --- UNIQUENESS CHECKS ---
+    const emailExists = await User.findOne({ email });
+    if (emailExists) return res.status(400).json({ message: "Email already exists." });
+
+    const licenseExists = await User.findOne({ drugLicense });
+    if (licenseExists) return res.status(400).json({ message: "Drug License Number already registered." });
+
+    // --- CREATE USER ---
+    const newUser = new User({
+      username: fullName,
+      email,
+      mobile,
+      password: password || "", // Empty for Google users
+      pharmacyName,
+      drugLicense,
+      address,
+      city,
+      state,
+      pincode,
+      pharmacyContact,
+      authProvider,
+      status: 'PENDING' // ⛔ Default Status
+    });
+
+    await newUser.save();
+
+    res.status(201).json({ 
+      message: "Registration Successful! Account is pending admin approval." 
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Registration Failed" });
+  }
 };
 
-// --- NEW FUNCTION: DEDICATED ADMIN LOGIN (NEW) ---
-export const adminLogin = async (req, res) => {
+// ==========================================
+// 4. LOGIN (With Approval Check)
+// ==========================================
+export const login = async (req, res) => {
+  try {
     const { emailOrUsername, password } = req.body;
     
-    const user = await User.findOne({ 
-        $or: [{ email: emailOrUsername }, { username: emailOrUsername }] 
+    // Find User
+    const user = await User.findOne({
+      $or: [{ email: emailOrUsername }, { username: emailOrUsername }]
     });
 
-    if (!user || !(await user.comparePassword(password))) {
-        return res.status(401).json({ message: 'Invalid credentials.' });
+    if (!user) return res.status(400).json({ message: "User not found" });
+
+    // ⛔ CHECK APPROVAL STATUS
+    if (user.status !== 'APPROVED' && user.role !== 'admin') {
+      return res.status(403).json({ 
+        message: "Account not active. Please wait for Admin Approval." 
+      });
     }
 
-    // --- CRITICAL ADMIN ROLE CHECK ---
-    if (user.role !== 'admin' && user.role !== 'superadmin') {
-        return res.status(403).json({ message: 'Access denied. Administrator privileges required.' });
+    // ✅ FIXED LOGIC: Treat missing authProvider as 'email' (for legacy users)
+    if (!user.authProvider || user.authProvider === 'email') {
+      const isMatch = await user.matchPassword(password);
+      if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
+    } else {
+       // Only block if they are explicitly a Google user trying to use a password
+       return res.status(400).json({ message: "Please Login with Google" });
     }
-    // ---
 
-    // Admins are not subject to the isApproved check, as they manage approvals.
+    res.json({
+      token: generateToken(user._id),
+      user: {
+        _id: user._id,
+        name: user.username,
+        username: user.username,
+        email: user.email,
+        pharmacyName: user.pharmacyName, 
+        role: user.role
+      }
+    });
+
+  } catch (error) {
+    res.status(500).json({ message: "Server Error" });
+  }
+};
+
+// ==========================================
+// 5. GOOGLE LOGIN (For Existing Users)
+// ==========================================
+export const googleLogin = async (req, res) => {
+  try {
+    const { token } = req.body;
     
-    // Generate token and return admin user data
-    const token = generateToken(user._id);
-
-    res.status(200).json({
-        message: 'Admin login successful!',
-        token: token,
-        user: {
-            id: user._id,
-            username: user.username,
-            email: user.email,
-            role: user.role,
-        },
+    // Verify Google Token
+    const ticket = await client.verifyIdToken({
+      idToken: token,
+      audience: process.env.GOOGLE_CLIENT_ID,
     });
-};
+    const { email } = ticket.getPayload();
 
+    // Check if user exists
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(400).json({ message: "User not registered. Please Sign Up first." });
+    }
 
-// --- FORGOT PASSWORD (Step 1) ---
-export const forgotPassword = async (req, res) => {
-  try {
-    const { email } = req.body;
-    if (!email) {
-      return res.status(400).json({ message: 'Email is required' });
-    }
+    // ⛔ CHECK APPROVAL STATUS
+    if (user.status !== 'APPROVED' && user.role !== 'admin') {
+      return res.status(403).json({ 
+        message: "Account not active. Please wait for Admin Approval." 
+      });
+    }
 
-    // Ensure user is verified AND approved before allowing password reset
-    const user = await User.findOne({ email, emailVerified: true, isApproved: true });
-    if (!user) {
-      return res.status(200).json({ message: 'If an account with this email exists, an OTP has been sent.' });
-    }
+    // Success
+    res.json({
+      token: generateToken(user._id),
+      user: {
+        _id: user._id,
+        name: user.username,
+        username: user.username,
+        email: user.email,
+        // ✅ CRITICAL FIX: Added here too for Google Users
+        pharmacyName: user.pharmacyName,
+        role: user.role
+      }
+    });
 
-    // --- OTP Generation and Saving (same as before) ---
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const otpExpires = new Date(Date.now() + 10 * 60 * 1000); 
-
-    user.otp = otp;
-    user.otpExpires = otpExpires;
-    await user.save();
-
-    console.log('===================================');
-    console.log(`Password Reset OTP for ${email}: ${otp}`);
-    console.log('===================================');
-
-    res.status(200).json({ message: 'If an account with this email exists, an OTP has been sent.' });
-
-  } catch (error){
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
-  }
-};
-
-// --- RESET PASSWORD (Step 2) ---
-export const resetPassword = async (req, res) => {
-  try {
-    const { email, otp, newPassword } = req.body;
-
-    if (!email || !otp || !newPassword) {
-      return res.status(400).json({ message: 'All fields are required' });
-    }
-
-    if (!passwordRegex.test(newPassword)) {
-      return res.status(400).json({ message: passwordError });
-    }
-
-    // Find the user with the matching email (must be approved to reset)
-    const user = await User.findOne({ email, emailVerified: true, isApproved: true });
-
-    // Check validity
-    if (!user || user.otp !== otp || user.otpExpires < new Date()) {
-        const message = user?.otpExpires < new Date() ? 'OTP has expired. Please try again.' : 'Invalid email or OTP.';
-      return res.status(400).json({ message: message });
-    }
-    
-    const isSamePassword = await user.comparePassword(newPassword);
-    if (isSamePassword) {
-      return res.status(400).json({ message: 'New password cannot be the same as your old password.' });
-    }
-
-    // --- Success! ---
-    user.password = newPassword; 
-    user.otp = undefined; 
-    user.otpExpires = undefined;
-
-    await user.save();
-
-    res.status(200).json({ message: 'Password reset successfully. You can now log in.' });
-
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
-  }
+  } catch (error) {
+    console.error("Google Login Error:", error);
+    res.status(500).json({ message: "Google Login Failed" });
+  }
 };

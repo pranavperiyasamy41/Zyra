@@ -1,24 +1,23 @@
-import { Router } from 'express';
+import express from 'express';
 import { 
-  registerEmail, 
-  registerVerify, 
-  loginUser,
-  forgotPassword,  // <-- 1. Import
-  resetPassword,
-  adminLogin
+  sendOtp, 
+  verifyOtp, 
+  register, 
+  login, 
+  googleLogin 
 } from '../controllers/auth.controller.js';
 
-const router = Router();
+const router = express.Router();
 
-// Define the route
-// When a POST request comes to /register, use the registerUser function
-router.post('/register-email', registerEmail);
-router.post('/register-verify', registerVerify);
+// Email Auth Flow
+router.post('/send-otp', sendOtp);
+router.post('/verify-otp', verifyOtp);
 
-router.post('/login', loginUser);
+// Main Actions
+router.post('/register', register);    // Handles Wizard Signup
+router.post('/login', login);          // Handles Email/Password Login
 
-router.post('/forgot-password', forgotPassword);
-router.post('/reset-password', resetPassword);
-router.post('/admin-login', adminLogin);
+// ✅ FIX: Change '/google-login' to '/google' to match Frontend
+router.post('/google', googleLogin); 
 
 export default router;
