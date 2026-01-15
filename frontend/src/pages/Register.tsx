@@ -6,11 +6,11 @@ import { jwtDecode } from "jwt-decode";
 
 const Register: React.FC = () => {
   const navigate = useNavigate();
-  
+
   // --- WIZARD STATE ---
-  const [step, setStep] = useState<number>(0); 
+  const [step, setStep] = useState<number>(0);
   // 0: Selection, 1: OTP, 2: User Details, 3: Pharmacy Details, 4: Success
-  
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -35,14 +35,14 @@ const Register: React.FC = () => {
     pharmacyContact: ''
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   // ==========================
   // 🔹 STEP 0: SELECTION
   // ==========================
-  
+
   // Handle Google Selection
   const handleGoogleSuccess = (credentialResponse: any) => {
     const decoded: any = jwtDecode(credentialResponse.credential);
@@ -52,9 +52,9 @@ const Register: React.FC = () => {
       googleToken: credentialResponse.credential,
       email: decoded.email,
       fullName: decoded.name,
-      // Google users don't need password
-      password: 'GoogleUser123!', 
-      confirmPassword: 'GoogleUser123!'
+      // ✅ HYBRID AUTH: We leave password empty so they MUST create one
+      password: '',
+      confirmPassword: ''
     });
     setStep(2); // Skip OTP, Go to User Details
   };
@@ -111,7 +111,7 @@ const Register: React.FC = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-900 p-4">
       <div className="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-xl w-full max-w-lg border border-gray-100 dark:border-slate-700">
-        
+
         {/* HEADER */}
         {step < 4 && <h2 className="text-3xl font-black text-center text-gray-900 dark:text-white mb-6">
           {step === 0 && "Join Smart Pharmacy"}
@@ -125,18 +125,26 @@ const Register: React.FC = () => {
         {/* --- STEP 0: CHOOSE METHOD --- */}
         {step === 0 && (
           <div className="space-y-4">
-             <div className="flex justify-center">
-                <GoogleLogin onSuccess={handleGoogleSuccess} theme="filled_blue" width="100%" />
-             </div>
-             <div className="relative flex py-2 items-center">
-                <div className="flex-grow border-t border-gray-200"></div>
-                <span className="flex-shrink mx-4 text-gray-400 text-sm">OR</span>
-                <div className="flex-grow border-t border-gray-200"></div>
-             </div>
-             <button onClick={startEmailFlow} className="w-full bg-gray-800 text-white py-3 rounded-xl font-bold hover:bg-gray-900">
-                Continue with Email
-             </button>
-             <p className="text-center text-gray-500 mt-4">Already have an account? <Link to="/login" className="text-blue-600 font-bold">Login</Link></p>
+            <div className="flex justify-center">
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={() => setError("Google Failed")}
+                theme="filled_blue"
+                size="large"
+                text="signup_with" // ✅ Correct Text
+                shape="pill"
+                width="100%"
+              />
+            </div>
+            <div className="relative flex py-2 items-center">
+              <div className="flex-grow border-t border-gray-200"></div>
+              <span className="flex-shrink mx-4 text-gray-400 text-sm">OR</span>
+              <div className="flex-grow border-t border-gray-200"></div>
+            </div>
+            <button onClick={startEmailFlow} className="w-full bg-gray-800 text-white py-3 rounded-xl font-bold hover:bg-gray-900">
+              Continue with Email
+            </button>
+            <p className="text-center text-gray-500 mt-4">Already have an account? <Link to="/login" className="text-blue-600 font-bold">Login</Link></p>
           </div>
         )}
 
@@ -150,7 +158,6 @@ const Register: React.FC = () => {
                 <button onClick={sendOtp} disabled={loading} className="bg-blue-600 text-white px-4 rounded-xl font-bold text-sm">Send OTP</button>
               </div>
             </div>
-            {/* Show OTP Input only if needed */}
             <input name="otp" type="text" value={formData.otp} onChange={handleChange} placeholder="Enter 6-digit Code" className="w-full p-3 rounded-xl border text-center text-xl tracking-widest dark:bg-slate-900 dark:text-white" />
             <button onClick={verifyOtp} disabled={loading} className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold">Verify & Continue</button>
             <button onClick={() => setStep(0)} className="w-full text-gray-500 py-2">Back</button>
@@ -163,13 +170,17 @@ const Register: React.FC = () => {
             <input name="fullName" value={formData.fullName} onChange={handleChange} placeholder="Full Name" className="w-full p-3 rounded-xl border dark:bg-slate-900 dark:text-white" required />
             <input name="email" value={formData.email} disabled className="w-full p-3 rounded-xl border bg-gray-100 dark:bg-slate-700 dark:text-gray-400 cursor-not-allowed" />
             <input name="mobile" value={formData.mobile} onChange={handleChange} placeholder="Mobile Number" className="w-full p-3 rounded-xl border dark:bg-slate-900 dark:text-white" required />
-            
-            {formData.authProvider === 'email' && (
-              <>
-                <input name="password" type="password" value={formData.password} onChange={handleChange} placeholder="Password (Min 8 chars, A-Z, 0-9, #)" className="w-full p-3 rounded-xl border dark:bg-slate-900 dark:text-white" />
-                <input name="confirmPassword" type="password" value={formData.confirmPassword} onChange={handleChange} placeholder="Confirm Password" className="w-full p-3 rounded-xl border dark:bg-slate-900 dark:text-white" />
-              </>
-            )}
+
+            {/* ✅ HYBRID AUTH: Password fields are ALWAYS shown now */}
+            <div className="bg-blue-50 dark:bg-slate-700/50 p-4 rounded-xl border border-blue-100 dark:border-slate-600">
+                <p className="text-xs font-bold text-blue-600 dark:text-blue-400 mb-2 uppercase">
+                    {formData.authProvider === 'google' ? 'Create Backup Password' : 'Secure Your Account'}
+                </p>
+                <div className="space-y-2">
+                    <input name="password" type="password" value={formData.password} onChange={handleChange} placeholder="Password (Min 8 chars)" className="w-full p-3 rounded-lg border dark:bg-slate-900 dark:text-white" />
+                    <input name="confirmPassword" type="password" value={formData.confirmPassword} onChange={handleChange} placeholder="Confirm Password" className="w-full p-3 rounded-lg border dark:bg-slate-900 dark:text-white" />
+                </div>
+            </div>
 
             <button onClick={() => setStep(3)} className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold mt-2">Next: Pharmacy Details</button>
           </div>
@@ -177,17 +188,17 @@ const Register: React.FC = () => {
 
         {/* --- STEP 3: PHARMACY DETAILS --- */}
         {step === 3 && (
-          <div className="space-y-3 h-96 overflow-y-auto pr-2">
+          <div className="space-y-3 h-96 overflow-y-auto pr-2 custom-scrollbar">
             <input name="pharmacyName" value={formData.pharmacyName} onChange={handleChange} placeholder="Pharmacy Name" className="w-full p-3 rounded-xl border dark:bg-slate-900 dark:text-white" />
             <input name="drugLicense" value={formData.drugLicense} onChange={handleChange} placeholder="Drug License Number" className="w-full p-3 rounded-xl border dark:bg-slate-900 dark:text-white" />
-            <textarea name="address" value={formData.address} onChange={(e:any) => handleChange(e)} placeholder="Address" className="w-full p-3 rounded-xl border dark:bg-slate-900 dark:text-white" />
+            <textarea name="address" value={formData.address} onChange={handleChange} placeholder="Address" className="w-full p-3 rounded-xl border dark:bg-slate-900 dark:text-white" />
             <div className="grid grid-cols-2 gap-2">
               <input name="city" value={formData.city} onChange={handleChange} placeholder="City" className="w-full p-3 rounded-xl border dark:bg-slate-900 dark:text-white" />
               <input name="state" value={formData.state} onChange={handleChange} placeholder="State" className="w-full p-3 rounded-xl border dark:bg-slate-900 dark:text-white" />
             </div>
             <input name="pincode" value={formData.pincode} onChange={handleChange} placeholder="Pincode" className="w-full p-3 rounded-xl border dark:bg-slate-900 dark:text-white" />
             <input name="pharmacyContact" value={formData.pharmacyContact} onChange={handleChange} placeholder="Pharmacy Contact" className="w-full p-3 rounded-xl border dark:bg-slate-900 dark:text-white" />
-            
+
             <button onClick={handleSubmit} disabled={loading} className="w-full bg-green-600 text-white py-3 rounded-xl font-bold shadow-lg shadow-green-600/30">
               {loading ? 'Submitting...' : 'Complete Registration'}
             </button>
@@ -204,7 +215,7 @@ const Register: React.FC = () => {
             <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">Registration Successful!</h2>
             <p className="text-gray-600 dark:text-gray-300 mb-6">
               Your account has been created and is currently <b>Pending Approval</b>.
-              <br/>You will be notified once the admin approves your pharmacy.
+              <br />You will be notified once the admin approves your pharmacy.
             </p>
             <Link to="/login" className="block w-full bg-blue-600 text-white py-3 rounded-xl font-bold">
               Return to Login

@@ -1,77 +1,49 @@
-import { createBrowserRouter } from 'react-router-dom';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import DashboardWrapper from './pages/DashboardWrapper';
-import DashboardPage from './pages/Dashboard';
-import InventoryPage from './pages/InventoryPage';
-import SalesPage from './pages/SalesPage';
-import NotesPage from './pages/NotesPage';
-import SettingsPage from './pages/SettingsPage';
-import LandingPage from './pages/LandingPage';
-import ProtectedRoute from './components/ProtectedRoute'; 
+import { createBrowserRouter } from "react-router-dom";
+import LandingPage from "./pages/LandingPage";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import ForgotPassword from "./pages/ForgotPassword";
+import ProtectedRoute from "./components/ProtectedRoute";
+import DashboardWrapper from "./pages/DashboardWrapper";
 
-// ✅ IMPORT ADMIN PAGES
-import AdminLoginPage from './pages/AdminLoginPage';
-import AdminDashboard from './pages/AdminDashboard'; 
-// import AdminUsersPage from './pages/AdminUsersPage'; // Uncomment if you have this file
+// User Pages
+import Dashboard from "./pages/Dashboard";
+import InventoryPage from "./pages/InventoryPage";
+import SalesPage from "./pages/SalesPage";
+import NotesPage from "./pages/NotesPage";
+import SettingsPage from "./pages/SettingsPage";
+
+// Admin Pages
+import AdminDashboard from "./pages/AdminDashboard";
+import AdminUsersPage from "./pages/AdminUsersPage";
 
 const router = createBrowserRouter([
   // --- PUBLIC ROUTES ---
-  {
-    path: '/',
-    element: <LandingPage />, 
-  },
-  {
-    path: '/login',
-    element: <Login />,
-  },
-  {
-    path: '/register',
-    element: <Register />,
-  },
-  
-  // ✅ ADMIN ROUTES (Added this section)
-  {
-    path: '/admin-login',
-    element: <AdminLoginPage />,
-  },
-  {
-    path: '/admin-dashboard',
-    element: (
-      // You can add an AdminProtected route wrapper here later for security
-      <AdminDashboard />
-    ),
-  },
+  { path: "/", element: <LandingPage /> },
+  { path: "/landing", element: <LandingPage /> },
+  { path: "/login", element: <Login /> },
+  { path: "/register", element: <Register /> },
+  { path: "/forgot-password", element: <ForgotPassword /> },
 
-  // --- USER DASHBOARD ROUTES ---
+  // --- PROTECTED ROUTES (WITH SIDEBAR) ---
   {
-    path: '/dashboard',
+    path: "/",
     element: (
       <ProtectedRoute>
         <DashboardWrapper />
       </ProtectedRoute>
     ),
     children: [
-      {
-        index: true, 
-        element: <DashboardPage />,
-      },
-      {
-        path: 'inventory',
-        element: <InventoryPage />,
-      },
-      {
-        path: 'sales',
-        element: <SalesPage />,
-      },
-      {
-        path: 'notes',
-        element: <NotesPage />,
-      },
-      {
-        path: 'settings',
-        element: <SettingsPage />,
-      },
+      // Standard User Routes
+      { path: "dashboard", element: <Dashboard /> },
+      { path: "inventory", element: <InventoryPage /> },
+      { path: "sales", element: <SalesPage /> },
+      { path: "notes", element: <NotesPage /> },
+      { path: "settings", element: <SettingsPage /> },
+
+      // ✅ ADMIN ROUTES (Now inside the layout!)
+      { path: "admin-dashboard", element: <AdminDashboard /> },
+      { path: "admin-users", element: <AdminUsersPage /> },
     ],
   },
 ]);

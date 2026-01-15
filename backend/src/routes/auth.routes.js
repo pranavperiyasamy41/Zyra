@@ -4,7 +4,8 @@ import {
   verifyOtp, 
   register, 
   login, 
-  googleLogin 
+  googleLogin,
+  adminLogin
 } from '../controllers/auth.controller.js';
 
 const router = express.Router();
@@ -19,5 +20,6 @@ router.post('/login', login);          // Handles Email/Password Login
 
 // ✅ FIX: Change '/google-login' to '/google' to match Frontend
 router.post('/google', googleLogin); 
+router.post('/admin-login', adminLogin);
 
 export default router;

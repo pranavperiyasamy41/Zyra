@@ -1,17 +1,27 @@
 import { Router } from 'express';
-import { protect } from '../middleware/authMiddleware.js'; // ✅ Fixed Import
+import { protect } from '../middleware/authMiddleware.js';
+import { adminProtect } from '../middleware/adminAuth.middleware.js';
 import { 
-  getPendingUsers, 
-  approveUser, 
-  rejectUser, 
-  getAllUsers 
+    getAllUsers, 
+    approveUser, 
+    rejectUser, 
+    getPendingUsers,
+    getSystemStats,
+    updateUserRole // 👈 Import new function
 } from '../controllers/admin.controller.js';
 
 const router = Router();
 
-router.get('/pending', protect, getPendingUsers);
-router.put('/approve/:id', protect, approveUser);
-router.delete('/reject/:id', protect, rejectUser);
-router.get('/users', protect, getAllUsers);
+router.use(protect, adminProtect);
+
+router.get('/metrics', getSystemStats);
+router.get('/users', getAllUsers);
+router.get('/pending-users', getPendingUsers);
+
+// ✅ FIXED: Matches Frontend Calls
+router.put('/approve/:id', approveUser);
+router.delete('/users/:id', rejectUser); // Changed from /reject/:id to match generic delete if preferred, or keep as reject.
+// Let's match the Frontend's expectation for Role Update:
+router.put('/users/:id', updateUserRole); 
 
 export default router;

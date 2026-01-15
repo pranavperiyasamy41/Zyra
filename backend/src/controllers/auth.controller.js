@@ -9,7 +9,7 @@ dotenv.config();
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // ==========================================
-// 1. EMAIL FLOW: SEND OTP
+// 1. EMAIL FLOW: SEND OTP (Unchanged)
 // ==========================================
 export const sendOtp = async (req, res) => {
   try {
@@ -33,7 +33,7 @@ export const sendOtp = async (req, res) => {
 };
 
 // ==========================================
-// 2. EMAIL FLOW: VERIFY OTP (Intermediate Step)
+// 2. EMAIL FLOW: VERIFY OTP (Unchanged)
 // ==========================================
 export const verifyOtp = async (req, res) => {
   try {
@@ -42,7 +42,6 @@ export const verifyOtp = async (req, res) => {
     
     if (!record) return res.status(400).json({ message: "Invalid OTP" });
 
-    // We don't create user yet. Just say "OK" so frontend can move to next step.
     res.status(200).json({ message: "OTP Verified", isVerified: true });
   } catch (error) {
     res.status(500).json({ message: "Server Error" });
@@ -50,48 +49,48 @@ export const verifyOtp = async (req, res) => {
 };
 
 // ==========================================
-// 3. FINAL REGISTRATION (WIZARD SUBMISSION)
+// 3. FINAL REGISTRATION (Unchanged)
 // ==========================================
 export const register = async (req, res) => {
   try {
     const { 
-      // Auth Info
       authProvider, googleToken, otp,
-      // User Info
-      fullName, email, mobile, password,
-      // Pharmacy Info
+      fullName, username, email, mobile, password, 
       pharmacyName, drugLicense, address, city, state, pincode, pharmacyContact
     } = req.body;
 
-    // --- SECURITY CHECKS ---
+    // 1. MAP DATA
+    const finalUsername = username || fullName;
+
+    // 2. SECURITY CHECKS
     if (authProvider === 'google') {
-      // 🛡️ Verify Google Token Integrity
-      const ticket = await client.verifyIdToken({
-        idToken: googleToken,
-        audience: process.env.GOOGLE_CLIENT_ID,
-      });
-      const payload = ticket.getPayload();
-      if (payload.email !== email) return res.status(400).json({ message: "Security Alert: Email mismatch." });
+       const ticket = await client.verifyIdToken({ idToken: googleToken, audience: process.env.GOOGLE_CLIENT_ID });
+       const payload = ticket.getPayload();
+       if (payload.email !== email) return res.status(400).json({ message: "Email mismatch." });
     } else {
-      // 🛡️ Verify OTP one last time to prevent skipping step
-      const validOtp = await Otp.findOne({ email, otp });
-      if (!validOtp) return res.status(400).json({ message: "Session expired. Please verify OTP again." });
-      await Otp.deleteOne({ email }); // Cleanup
+       const validOtp = await Otp.findOne({ email, otp });
+       if (!validOtp) return res.status(400).json({ message: "Invalid or Expired OTP." });
+       await Otp.deleteOne({ email }); 
     }
 
-    // --- UNIQUENESS CHECKS ---
+    // 3. UNIQUENESS CHECKS
     const emailExists = await User.findOne({ email });
     if (emailExists) return res.status(400).json({ message: "Email already exists." });
 
-    const licenseExists = await User.findOne({ drugLicense });
-    if (licenseExists) return res.status(400).json({ message: "Drug License Number already registered." });
+    const usernameExists = await User.findOne({ username: finalUsername });
+    if (usernameExists) return res.status(400).json({ message: "Username is already taken." });
 
-    // --- CREATE USER ---
+    if (drugLicense) {
+        const licenseExists = await User.findOne({ drugLicense });
+        if (licenseExists) return res.status(400).json({ message: "Drug License Number already registered." });
+    }
+
+    // 4. CREATE USER (Password is saved here if provided!)
     const newUser = new User({
-      username: fullName,
+      username: finalUsername,
       email,
       mobile,
-      password: password || "", // Empty for Google users
+      password: password || "", 
       pharmacyName,
       drugLicense,
       address,
@@ -100,62 +99,68 @@ export const register = async (req, res) => {
       pincode,
       pharmacyContact,
       authProvider,
-      status: 'PENDING' // ⛔ Default Status
+      status: 'PENDING',
+      role: 'user'
     });
 
     await newUser.save();
 
-    res.status(201).json({ 
-      message: "Registration Successful! Account is pending admin approval." 
-    });
+    res.status(201).json({ message: "Registration Successful! Account is pending admin approval." });
 
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Registration Failed" });
+    console.error("Register Error:", error);
+    if (error.code === 11000) {
+        return res.status(400).json({ message: "Error: Email or License already registered." });
+    }
+    res.status(500).json({ message: error.message || "Registration Failed" });
   }
 };
 
 // ==========================================
-// 4. LOGIN (With Approval Check)
+// 4. LOGIN (✅ UPDATED for Hybrid Auth)
 // ==========================================
 export const login = async (req, res) => {
   try {
     const { emailOrUsername, password } = req.body;
     
-    // Find User
     const user = await User.findOne({
       $or: [{ email: emailOrUsername }, { username: emailOrUsername }]
     });
 
     if (!user) return res.status(400).json({ message: "User not found" });
 
-    // ⛔ CHECK APPROVAL STATUS
-    if (user.status !== 'APPROVED' && user.role !== 'admin') {
+    // ⛔ APPROVAL CHECK
+    if (user.status !== 'APPROVED' && user.role !== 'admin' && user.role !== 'superadmin') {
       return res.status(403).json({ 
-        message: "Account not active. Please wait for Admin Approval." 
+        message: "Account pending approval. Please contact Admin." 
       });
     }
 
-    // ✅ FIXED LOGIC: Treat missing authProvider as 'email' (for legacy users)
-    if (!user.authProvider || user.authProvider === 'email') {
-      const isMatch = await user.matchPassword(password);
-      if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
+    // ✅ HYBRID AUTH CHANGE:
+    // Instead of blocking Google users, we check the password for EVERYONE.
+    const isMatch = await user.matchPassword(password);
+    
+    if (isMatch) {
+        // Success!
+        res.json({
+            token: generateToken(user._id),
+            user: {
+                _id: user._id,
+                name: user.username,
+                username: user.username,
+                email: user.email,
+                pharmacyName: user.pharmacyName, 
+                role: user.role
+            }
+        });
     } else {
-       // Only block if they are explicitly a Google user trying to use a password
-       return res.status(400).json({ message: "Please Login with Google" });
+        // Failure Message Logic
+        if (user.authProvider === 'google') {
+             // Helpful hint for Google users who might have forgotten they set a password
+             return res.status(400).json({ message: "Invalid Password. Try logging in with Google." });
+        }
+        return res.status(400).json({ message: "Invalid credentials" });
     }
-
-    res.json({
-      token: generateToken(user._id),
-      user: {
-        _id: user._id,
-        name: user.username,
-        username: user.username,
-        email: user.email,
-        pharmacyName: user.pharmacyName, 
-        role: user.role
-      }
-    });
 
   } catch (error) {
     res.status(500).json({ message: "Server Error" });
@@ -163,33 +168,29 @@ export const login = async (req, res) => {
 };
 
 // ==========================================
-// 5. GOOGLE LOGIN (For Existing Users)
+// 5. GOOGLE LOGIN (Unchanged)
 // ==========================================
 export const googleLogin = async (req, res) => {
   try {
     const { token } = req.body;
     
-    // Verify Google Token
     const ticket = await client.verifyIdToken({
       idToken: token,
       audience: process.env.GOOGLE_CLIENT_ID,
     });
     const { email } = ticket.getPayload();
 
-    // Check if user exists
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(400).json({ message: "User not registered. Please Sign Up first." });
     }
 
-    // ⛔ CHECK APPROVAL STATUS
     if (user.status !== 'APPROVED' && user.role !== 'admin') {
       return res.status(403).json({ 
         message: "Account not active. Please wait for Admin Approval." 
       });
     }
 
-    // Success
     res.json({
       token: generateToken(user._id),
       user: {
@@ -197,7 +198,6 @@ export const googleLogin = async (req, res) => {
         name: user.username,
         username: user.username,
         email: user.email,
-        // ✅ CRITICAL FIX: Added here too for Google Users
         pharmacyName: user.pharmacyName,
         role: user.role
       }
@@ -206,5 +206,43 @@ export const googleLogin = async (req, res) => {
   } catch (error) {
     console.error("Google Login Error:", error);
     res.status(500).json({ message: "Google Login Failed" });
+  }
+};
+
+// ==========================================
+// 6. ADMIN LOGIN (Unchanged)
+// ==========================================
+export const adminLogin = async (req, res) => {
+  try {
+    const { emailOrUsername, password } = req.body;
+    
+    const user = await User.findOne({
+      $or: [{ email: emailOrUsername }, { username: emailOrUsername }]
+    });
+
+    if (!user) return res.status(400).json({ message: "Admin account not found" });
+
+    if (user.role !== 'admin' && user.role !== 'superadmin') {
+      return res.status(403).json({ message: "Access Denied: You are not an Administrator." });
+    }
+
+    const isMatch = await user.matchPassword(password);
+    if (!isMatch) return res.status(400).json({ message: "Invalid Admin Credentials" });
+
+    res.json({
+      token: generateToken(user._id),
+      user: {
+        _id: user._id,
+        name: user.username,
+        username: user.username,
+        email: user.email,
+        pharmacyName: user.pharmacyName,
+        role: user.role
+      }
+    });
+
+  } catch (error) {
+    console.error("Admin Login Error:", error);
+    res.status(500).json({ message: "Server Error" });
   }
 };

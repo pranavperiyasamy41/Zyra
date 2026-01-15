@@ -1,12 +1,11 @@
-// backend/src/middleware/adminAuth.middleware.js
-const adminProtect = (req, res, next) => {
-  // Check if the role is 'superadmin' OR 'admin'
-  if (req.user && (req.user.role === 'superadmin' || req.user.role === 'admin')) {
-    next();
-  } else {
-    res.status(403).json({ 
-      message: 'Access Denied: You do not have Super Admin privileges.' 
-    });
-  }
-};
-export default adminProtect;
+export const adminProtect = (req, res, next) => {
+    // Debugging: Let's see who is trying to enter
+    console.log("Checking Admin Access for:", req.user?.username, "Role:", req.user?.role);
+
+    if (req.user && (req.user.role === 'admin' || req.user.role === 'superadmin')) {
+      next();
+    } else {
+      console.log("⛔ Access Denied: Not an Admin");
+      res.status(403).json({ message: 'Not authorized as an admin' });
+    }
+  };

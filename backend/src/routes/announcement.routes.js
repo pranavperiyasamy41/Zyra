@@ -1,5 +1,6 @@
 import { Router } from 'express';
-import { protect } from '../middleware/authMiddleware.js'; // ✅ FIXED: Added { }
+import { protect } from '../middleware/authMiddleware.js'; 
+import { adminProtect } from '../middleware/adminAuth.middleware.js'; // 👈 Import Bodyguard
 import { 
   createAnnouncement, 
   getAnnouncements, 
@@ -8,10 +9,11 @@ import {
 
 const router = Router();
 
-router.route('/')
-  .post(protect, createAnnouncement)
-  .get(protect, getAnnouncements);
+// Public: Users can read
+router.get('/', protect, getAnnouncements);
 
-router.delete('/:id', protect, deleteAnnouncement);
+// 🔒 Restricted: Only Admins can Post/Delete
+router.post('/', protect, adminProtect, createAnnouncement);
+router.delete('/:id', protect, adminProtect, deleteAnnouncement);
 
 export default router;
