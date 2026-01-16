@@ -1,5 +1,7 @@
 import User from '../models/user.model.js';
 import Medicine from '../models/medicine.model.js';
+import AuditLog from '../models/auditLog.model.js'; // 👈 NEW IMPORT
+import sendEmail from '../utils/sendEmail.js';
 
 // 1. GET DASHBOARD METRICS
 export const getSystemStats = async (req, res) => {
@@ -28,7 +30,6 @@ export const getSystemStats = async (req, res) => {
 // 2. GET ALL USERS
 export const getAllUsers = async (req, res) => {
   try {
-    // Determine which roles to fetch. Usually, we want all except superadmins.
     const users = await User.find({}).select('-password');
     res.json(users);
   } catch (error) { 
@@ -52,11 +53,29 @@ export const approveUser = async (req, res) => {
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ message: "User not found" });
     
+    // 1. Update Status
     user.status = 'APPROVED';
     await user.save();
     
-    res.json({ message: "User Approved" });
+    // 2. Log Action
+    await AuditLog.create({
+        actorId: req.user._id, actorName: req.user.username,
+        action: "USER_APPROVED", details: `Approved user: ${user.username}`
+    });
+
+    // 3. Send Email
+    const emailSubject = "🎉 Account Approved - Smart Pharmacy";
+    const emailHtml = `
+      <h3>Welcome to Smart Pharmacy!</h3>
+      <p>Hello <strong>${user.username}</strong>,</p>
+      <p>Your account for <strong>${user.pharmacyName}</strong> has been approved.</p>
+      <p>You can now login to your dashboard.</p>
+    `;
+    sendEmail(user.email, emailSubject, emailHtml);
+
+    res.json({ message: "User Approved & Email Sent" });
   } catch (error) { 
+    console.error("Approval Error:", error);
     res.status(500).json({ message: "Server Error" }); 
   }
 };
@@ -64,14 +83,23 @@ export const approveUser = async (req, res) => {
 // 5. REJECT / DELETE USER
 export const rejectUser = async (req, res) => {
   try {
-    await User.findByIdAndDelete(req.params.id);
+    const user = await User.findById(req.params.id);
+    if (user) {
+        await User.findByIdAndDelete(req.params.id);
+        
+        // Log Action
+        await AuditLog.create({
+            actorId: req.user._id, actorName: req.user.username,
+            action: "USER_DELETED", details: `Deleted/Rejected user: ${user.username}`
+        });
+    }
     res.json({ message: "User Deleted/Rejected" });
   } catch (error) { 
     res.status(500).json({ message: "Server Error" }); 
   }
 };
 
-// 6. UPDATE USER ROLE (The New Function)
+// 6. UPDATE USER ROLE
 export const updateUserRole = async (req, res) => {
   try {
     const { role } = req.body;
@@ -79,7 +107,6 @@ export const updateUserRole = async (req, res) => {
 
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    // Prevent changing your own role
     if (req.user._id.toString() === user._id.toString()) {
       return res.status(400).json({ message: "You cannot change your own role." });
     }
@@ -87,7 +114,23 @@ export const updateUserRole = async (req, res) => {
     user.role = role;
     await user.save();
     
+    await AuditLog.create({
+        actorId: req.user._id, actorName: req.user.username,
+        action: "ROLE_UPDATED", details: `Changed ${user.username} role to ${role}`
+    });
+
     res.json({ message: `User role updated to ${role}` });
+  } catch (error) {
+    res.status(500).json({ message: "Server Error" });
+  }
+};
+
+// 7. ✅ GET AUDIT LOGS (NEW)
+export const getAuditLogs = async (req, res) => {
+  try {
+    // Return last 100 logs
+    const logs = await AuditLog.find().sort({ createdAt: -1 }).limit(100);
+    res.json(logs);
   } catch (error) {
     res.status(500).json({ message: "Server Error" });
   }

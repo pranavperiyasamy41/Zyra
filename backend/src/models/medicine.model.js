@@ -2,24 +2,28 @@ import mongoose from 'mongoose';
 
 const medicineSchema = new mongoose.Schema(
   {
-    // This is the most important field!
-    // It links this medicine batch to a specific user.
     user: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
-      ref: 'User', // This tells Mongoose to reference the 'User' model
+      ref: 'User',
     },
     name: {
       type: String,
       required: true,
       trim: true,
     },
+    // 🔫 BARCODE FIELD (New)
+    barcode: {
+      type: String,
+      trim: true,
+      default: '' // Optional, because not all medicines have barcodes
+    },
     batchId: {
       type: String,
       required: true,
       trim: true,
     },
-    quantity: {
+    stock: {
       type: Number,
       required: true,
       min: 0,
@@ -32,17 +36,21 @@ const medicineSchema = new mongoose.Schema(
       type: Date,
       required: true,
     },
+    category: {
+        type: String,
+        default: 'General'
+    },
     lowStockThreshold: {
       type: Number,
       default: 10,
     },
   },
   {
-    timestamps: true, // Adds createdAt and updatedAt
+    timestamps: true,
   }
 );
 
-// This ensures a user cannot have two batches with the same batchId
+// Prevent duplicate Batch IDs for the same user
 medicineSchema.index({ user: 1, batchId: 1 }, { unique: true });
 
 const Medicine = mongoose.model('Medicine', medicineSchema);

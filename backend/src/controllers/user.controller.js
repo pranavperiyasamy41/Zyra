@@ -2,29 +2,44 @@ import User from '../models/user.model.js';
 
 export const updateUserProfile = async (req, res) => {
   try {
-    // 1. Find the user
     const user = await User.findById(req.user._id);
 
     if (user) {
-      // 2. Force Update Fields
+      // 1. Basic Info
       user.username = req.body.username || user.username;
       user.pharmacyName = req.body.pharmacyName || user.pharmacyName;
+      user.email = req.body.email || user.email; // Allow email update if needed
 
-      // 3. Only update password if provided
+      // 2. Invoice Settings (Address & License)
+      user.address = req.body.address || user.address;
+      user.city = req.body.city || user.city;
+      user.state = req.body.state || user.state;
+      user.pincode = req.body.pincode || user.pincode;
+      user.drugLicense = req.body.drugLicense || user.drugLicense;
+      user.pharmacyContact = req.body.pharmacyContact || user.pharmacyContact;
+
+      // 3. Security (Password)
       if (req.body.password && req.body.password.length > 0) {
         user.password = req.body.password;
       }
 
-      // 4. Save and return NEW data
       const updatedUser = await user.save();
       
+      // 4. Return FULL Data for Context Update
       res.json({
         _id: updatedUser._id,
         username: updatedUser.username,
         email: updatedUser.email,
-        pharmacyName: updatedUser.pharmacyName,
         role: updatedUser.role,
-        token: req.headers.authorization.split(' ')[1] // Send token back just in case
+        pharmacyName: updatedUser.pharmacyName,
+        // Send back new invoice details
+        address: updatedUser.address,
+        city: updatedUser.city,
+        state: updatedUser.state,
+        pincode: updatedUser.pincode,
+        drugLicense: updatedUser.drugLicense,
+        pharmacyContact: updatedUser.pharmacyContact,
+        token: req.headers.authorization.split(' ')[1] 
       });
     } else {
       res.status(404).json({ message: "User not found" });

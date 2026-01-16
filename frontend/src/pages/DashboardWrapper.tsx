@@ -55,43 +55,29 @@ const DashboardWrapper: React.FC = () => {
           {/* Navigation Links */}
           <nav className="flex-1 space-y-2">
             
-            {/* 👑 ADMIN VIEW (Clean & Focused) */}
+            {/* 👑 ADMIN VIEW */}
             {isAdmin ? (
                <>
-                 <div className="px-4 mb-2 text-xs font-bold text-gray-400 uppercase tracking-wider">
-                    Control Panel
-                 </div>
-                 <NavLink to="/admin-dashboard" end className={navLinkClass}>
-                    <span>📊</span> System Overview
-                 </NavLink>
-                 <NavLink to="/admin-users" className={navLinkClass}>
-                    <span>👥</span> Manage Users
-                 </NavLink>
+                 <div className="px-4 mb-2 text-xs font-bold text-gray-400 uppercase tracking-wider">Control Panel</div>
+                 <NavLink to="/admin-dashboard" end className={navLinkClass}><span>📊</span> System Overview</NavLink>
+                 <NavLink to="/admin-users" className={navLinkClass}><span>👥</span> Manage Users</NavLink>
+                 {/* ✅ NEW LINKS */}
+                 <NavLink to="/admin-logs" className={navLinkClass}><span>🛡️</span> Audit Logs</NavLink> 
+                 <NavLink to="/admin-support" className={navLinkClass}><span>🎫</span> Support Tickets</NavLink>
                </>
             ) : (
-               /* 💊 USER VIEW (Full Pharmacy Tools) */
+               /* 💊 USER VIEW */
                <>
-                 <NavLink to="/dashboard" end className={navLinkClass}>
-                   <span>📊</span> Dashboard
-                 </NavLink>
+                 <NavLink to="/dashboard" end className={navLinkClass}><span>📊</span> Dashboard</NavLink>
                  <div className="my-4 border-t border-gray-200 dark:border-slate-700"></div>
-                 
-                 <div className="px-4 mb-2 text-xs font-bold text-gray-400 uppercase tracking-wider">
-                    My Pharmacy
-                 </div>
-                 <NavLink to="/inventory" className={navLinkClass}>
-                   <span>💊</span> Inventory
-                 </NavLink>
-                 <NavLink to="/sales" className={navLinkClass}>
-                   <span>💰</span> Sales History
-                 </NavLink>
-                 <NavLink to="/notes" className={navLinkClass}>
-                   <span>📝</span> Notes
-                 </NavLink>
+                 <div className="px-4 mb-2 text-xs font-bold text-gray-400 uppercase tracking-wider">My Pharmacy</div>
+                 <NavLink to="/inventory" className={navLinkClass}><span>💊</span> Inventory</NavLink>
+                 <NavLink to="/sales" className={navLinkClass}><span>💰</span> Sales History</NavLink>
+                 <NavLink to="/notes" className={navLinkClass}><span>📝</span> Notes</NavLink>
+                 {/* ✅ NEW LINK */}
+                 <NavLink to="/support" className={navLinkClass}><span>🛠️</span> Support</NavLink>
                  <div className="my-4 border-t border-gray-200 dark:border-slate-700"></div>
-                 <NavLink to="/settings" className={navLinkClass}>
-                   <span>⚙️</span> Settings
-                 </NavLink>
+                 <NavLink to="/settings" className={navLinkClass}><span>⚙️</span> Settings</NavLink>
                </>
             )}
 

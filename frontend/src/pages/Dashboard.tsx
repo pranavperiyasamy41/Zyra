@@ -11,8 +11,8 @@ import RecordSaleModal from '../components/RecordSaleModal';
 interface Medicine { 
   _id: string; 
   name: string; 
-  quantity: number; // Note: Ensure backend sends 'quantity' or 'stock'. We used 'stock' in the model previously.
-  stock?: number;   // Handling both just in case
+  quantity: number; 
+  stock?: number;
   expiryDate: string; 
   createdAt: string; 
 }
@@ -32,6 +32,14 @@ interface Announcement {
   createdAt: string; 
 }
 
+// 🔮 Prediction Type
+interface Prediction {
+    name: string;
+    daysLeft: number;
+    dailyRate: string;
+    currentStock: number;
+}
+
 const fetcher = (url: string) => apiClient.get(url).then(res => res.data);
 
 const DashboardPage: React.FC = () => {
@@ -39,10 +47,11 @@ const DashboardPage: React.FC = () => {
   const [isSaleModalOpen, setIsSaleModalOpen] = useState(false);
 
   // --- Fetch Data ---
-  // Note: These endpoints must exist in your backend for data to show
   const { data: inventory = [], isLoading: loadingInv, mutate: mutateInventory } = useSWR<Medicine[]>('/medicines', fetcher);
   const { data: sales = [], isLoading: loadingSales, mutate: mutateSales } = useSWR<Sale[]>('/sales', fetcher);
   const { data: announcements = [] } = useSWR<Announcement[]>('/announcements', fetcher);
+  // 🔮 Fetch Predictions
+  const { data: predictions = [] } = useSWR<Prediction[]>('/sales/predict', fetcher);
 
   // --- Stats Logic ---
   const stats = useMemo(() => {
@@ -54,7 +63,6 @@ const DashboardPage: React.FC = () => {
     const thirtyDays = new Date();
     thirtyDays.setDate(today.getDate() + 30);
 
-    // Normalize quantity field (backend might send 'stock' or 'quantity')
     const getQty = (item: Medicine) => item.quantity ?? item.stock ?? 0;
 
     const lowStock = safeInventory.filter(i => getQty(i) > 0 && getQty(i) <= 10);
@@ -143,14 +151,50 @@ const DashboardPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 4. CHARTS */}
-      <div className="mb-8">
-        <SalesChart sales={Array.isArray(sales) ? sales : []} />
+      {/* 4. CHARTS & PREDICTIONS ROW */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+        
+        {/* CHART (Takes 2/3 width) */}
+        <div className="lg:col-span-2">
+            <SalesChart sales={Array.isArray(sales) ? sales : []} />
+        </div>
+
+        {/* 🔮 AI PREDICTIONS WIDGET (Takes 1/3 width) */}
+        <div className="bg-gradient-to-br from-violet-600 to-purple-700 rounded-2xl p-6 shadow-xl text-white">
+            <div className="flex items-center gap-2 mb-4 border-b border-white/20 pb-4">
+                <span className="text-2xl">🔮</span>
+                <div>
+                    <h3 className="font-bold text-lg leading-tight">Demand Forecast</h3>
+                    <p className="text-xs text-purple-200">AI-Powered Stock Predictions</p>
+                </div>
+            </div>
+
+            <div className="space-y-3">
+                {predictions.length > 0 ? predictions.slice(0, 4).map((p, idx) => (
+                    <div key={idx} className="bg-white/10 p-3 rounded-lg backdrop-blur-sm border border-white/10 hover:bg-white/20 transition-colors">
+                        <div className="flex justify-between items-start mb-1">
+                            <span className="font-bold text-sm">{p.name}</span>
+                            <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded font-bold">
+                                {p.daysLeft === 0 ? 'Today' : `${p.daysLeft} Days`}
+                            </span>
+                        </div>
+                        <div className="flex justify-between text-xs text-purple-100">
+                            <span>Selling {p.dailyRate}/day</span>
+                            <span>Stock: {p.currentStock}</span>
+                        </div>
+                    </div>
+                )) : (
+                    <div className="text-center py-8 text-purple-200 text-sm">
+                        <p className="mb-2">✨ All good!</p>
+                        <p className="text-xs opacity-70">No immediate stock-outs predicted based on sales trends.</p>
+                    </div>
+                )}
+            </div>
+        </div>
       </div>
 
-      {/* 5. INTELLIGENT FEEDS */}
+      {/* 5. INTELLIGENT FEEDS (Top Selling & Recent) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        
         {/* Top Selling */}
         <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-xl border border-gray-100 dark:border-slate-700">
           <div className="flex justify-between items-center mb-6 border-b pb-2 dark:border-slate-700">

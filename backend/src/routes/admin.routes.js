@@ -1,27 +1,26 @@
 import { Router } from 'express';
-import { protect } from '../middleware/authMiddleware.js';
-import { adminProtect } from '../middleware/adminAuth.middleware.js';
+import { protect, admin } from '../middleware/authMiddleware.js';
 import { 
-    getAllUsers, 
-    approveUser, 
-    rejectUser, 
-    getPendingUsers,
-    getSystemStats,
-    updateUserRole // 👈 Import new function
+    getSystemStats, getAllUsers, getPendingUsers, 
+    approveUser, rejectUser, updateUserRole, getAuditLogs // 👈 Added getAuditLogs
 } from '../controllers/admin.controller.js';
+import { getAllTickets, resolveTicket } from '../controllers/ticket.controller.js'; // 👈 Added Ticket Controller
 
 const router = Router();
 
-router.use(protect, adminProtect);
+// --- User Management ---
+router.get('/stats', protect, admin, getSystemStats);
+router.get('/users', protect, admin, getAllUsers);
+router.get('/users/pending', protect, admin, getPendingUsers);
+router.put('/users/:id/approve', protect, admin, approveUser);
+router.put('/users/:id/role', protect, admin, updateUserRole);
+router.delete('/users/:id', protect, admin, rejectUser);
 
-router.get('/metrics', getSystemStats);
-router.get('/users', getAllUsers);
-router.get('/pending-users', getPendingUsers);
+// --- ✅ NEW: Audit Logs ---
+router.get('/logs', protect, admin, getAuditLogs);
 
-// ✅ FIXED: Matches Frontend Calls
-router.put('/approve/:id', approveUser);
-router.delete('/users/:id', rejectUser); // Changed from /reject/:id to match generic delete if preferred, or keep as reject.
-// Let's match the Frontend's expectation for Role Update:
-router.put('/users/:id', updateUserRole); 
+// --- ✅ NEW: Admin Support ---
+router.get('/tickets', protect, admin, getAllTickets);
+router.put('/tickets/:id/resolve', protect, admin, resolveTicket);
 
 export default router;

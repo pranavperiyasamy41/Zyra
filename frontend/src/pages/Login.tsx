@@ -154,6 +154,18 @@ const Login: React.FC = () => {
             />
           </div>
 
+          {/* ✅ NEW: Forgot Password Link (Dynamic Color) */}
+          <div className="flex justify-end">
+            <Link 
+              to="/forgot-password" 
+              className={`text-xs font-bold hover:underline transition-colors ${
+                loginType === 'admin' ? 'text-red-500 hover:text-red-600' : 'text-blue-500 hover:text-blue-600'
+              }`}
+            >
+              Forgot Password?
+            </Link>
+          </div>
+
           <button
             type="submit"
             disabled={loading}

@@ -15,15 +15,15 @@ interface Announcement { _id: string; title: string; content: string; type: stri
 
 const fetcher = (url: string) => apiClient.get(url).then(res => res.data);
 
-const AdminDashboardPage: React.FC = () => {
+const AdminDashboard = () => {
   const { user } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // SECURE FETCH: SWR will only run if user is an admin
   const isAdmin = user?.role === 'admin' || user?.role === 'superadmin';
   
+  // ✅ FIX 1: Changed '/admin/metrics' to '/admin/stats' to match your backend
   const { data: metrics, error: metricsError, isLoading: loadingMetrics } = useSWR<AdminMetrics>(
-    isAdmin ? '/admin/metrics' : null, 
+    isAdmin ? '/admin/stats' : null, 
     fetcher
   );
   
@@ -43,47 +43,80 @@ const AdminDashboardPage: React.FC = () => {
   };
 
   if (!isAdmin) return <div className="p-8 text-red-500 font-bold text-center">ACCESS DENIED: ADMINS ONLY</div>;
-  if (loadingMetrics) return <div className="p-8 dark:text-slate-300 animate-pulse text-center font-mono">SECURE ADMIN LOAD...</div>;
-  if (metricsError) return <div className="p-8 text-red-500">Session Error. Please log in again.</div>;
-
-  const cards = [
-    { title: "Approvals", count: metrics?.pendingApprovalsCount, color: "bg-red-500", icon: "👤" },
-    { title: "Low Stock", count: metrics?.lowStockCount, color: "bg-yellow-500", icon: "📦" },
-    { title: "Expiry", count: metrics?.expiryAlertsCount, color: "bg-orange-500", icon: "⚠️" },
-    { title: "Alerts", count: metrics?.suspiciousAlertsCount, color: "bg-purple-500", icon: "🚨" },
-  ];
+  if (loadingMetrics) return <div className="p-8 dark:text-slate-300 animate-pulse text-center font-mono">Loading System Overview...</div>;
+  
+  if (metricsError) return (
+    <div className="p-8 text-red-500 font-bold bg-red-100 rounded-xl border border-red-200 mt-6">
+        ⚠️ Error loading stats. The backend route /admin/stats might be unreachable.
+    </div>
+  );
 
   return (
     <div className="p-8">
-      <h1 className="text-3xl font-black text-gray-900 dark:text-white mb-8 tracking-tighter uppercase">System Controller</h1>
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
-        {cards.map((card) => (
-          <div key={card.title} className={`${card.color} text-white p-6 rounded-2xl shadow-xl`}>
-            <div className="flex items-center justify-between opacity-80">
-              <p className="text-xs font-bold uppercase">{card.title}</p>
-              <span className="text-2xl">{card.icon}</span>
+      <h1 className="text-3xl font-black text-white mb-8">SYSTEM CONTROLLER</h1>
+      
+      {/* METRICS ROW (Updated with Gradient UI) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+        
+        {/* Approvals */}
+        <div className="bg-gradient-to-br from-red-500 to-red-600 rounded-2xl p-6 text-white shadow-lg shadow-red-500/20 relative overflow-hidden">
+            <div className="relative z-10">
+                <p className="text-xs font-bold opacity-80 uppercase tracking-widest">Pending Approvals</p>
+                <p className="text-5xl font-black mt-2">{metrics?.pendingApprovalsCount ?? 0}</p>
             </div>
-            <p className="text-5xl font-black mt-2">{card.count ?? 0}</p>
-          </div>
-        ))}
+            <div className="absolute right-[-20px] bottom-[-20px] text-9xl opacity-10 rotate-12">👤</div>
+        </div>
+
+        {/* Low Stock */}
+        <div className="bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl p-6 text-white shadow-lg shadow-orange-500/20 relative overflow-hidden">
+             <div className="relative z-10">
+                <p className="text-xs font-bold opacity-80 uppercase tracking-widest">Global Low Stock</p>
+                <p className="text-5xl font-black mt-2">{metrics?.lowStockCount ?? 0}</p>
+            </div>
+            <div className="absolute right-[-20px] bottom-[-20px] text-9xl opacity-10 rotate-12">📦</div>
+        </div>
+
+        {/* Expiry */}
+        <div className="bg-gradient-to-br from-orange-500 to-red-500 rounded-2xl p-6 text-white shadow-lg shadow-red-500/20 relative overflow-hidden">
+             <div className="relative z-10">
+                <p className="text-xs font-bold opacity-80 uppercase tracking-widest">Expiring Soon</p>
+                <p className="text-5xl font-black mt-2">{metrics?.expiryAlertsCount ?? 0}</p>
+            </div>
+            <div className="absolute right-[-20px] bottom-[-20px] text-9xl opacity-10 rotate-12">⚠️</div>
+        </div>
+
+        {/* Security Alerts */}
+        <div className="bg-gradient-to-br from-violet-500 to-purple-600 rounded-2xl p-6 text-white shadow-lg shadow-purple-500/20 relative overflow-hidden">
+             <div className="relative z-10">
+                <p className="text-xs font-bold opacity-80 uppercase tracking-widest">Security Alerts</p>
+                <p className="text-5xl font-black mt-2">{metrics?.suspiciousAlertsCount ?? 0}</p>
+            </div>
+            <div className="absolute right-[-20px] bottom-[-20px] text-9xl opacity-10 rotate-12">🚨</div>
+        </div>
       </div>
 
       <div className="flex justify-between items-center border-b dark:border-slate-700 pb-4 mb-6">
-        <h2 className="text-xl font-bold dark:text-white uppercase">Announcements</h2>
-        <button onClick={() => setIsModalOpen(true)} className="bg-white dark:bg-slate-800 text-blue-600 border border-blue-600 px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-50 transition-colors">
+        <h2 className="text-xl font-bold dark:text-white uppercase">ANNOUNCEMENTS</h2>
+        <button onClick={() => setIsModalOpen(true)} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/30">
           + POST NEW
         </button>
       </div>
 
       <div className="space-y-4">
-        {announcements?.map((ann) => (
-          <div key={ann._id} className="p-4 bg-white dark:bg-slate-800 rounded-xl border dark:border-slate-700 shadow-sm flex justify-between items-center">
+        {announcements?.length === 0 ? (
+            <div className="text-gray-500 italic">No active announcements.</div>
+        ) : announcements?.map((ann) => (
+          <div key={ann._id} className="p-4 bg-white dark:bg-slate-800 rounded-xl border dark:border-slate-700 shadow-sm flex justify-between items-center hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
             <div>
-              <span className="text-[10px] font-black bg-blue-100 text-blue-700 px-2 py-0.5 rounded uppercase">{ann.type}</span>
+              <span className={`text-[10px] font-black px-2 py-0.5 rounded uppercase ${
+                  ann.type === 'alert' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'
+              }`}>
+                  {ann.type}
+              </span>
               <h3 className="font-bold dark:text-white mt-1">{ann.title}</h3>
-              <p className="text-sm text-gray-500">{ann.content}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{ann.content}</p>
             </div>
-            <button onClick={() => handleDeleteAnnouncement(ann._id)} className="text-red-500 font-bold text-xs">DELETE</button>
+            <button onClick={() => handleDeleteAnnouncement(ann._id)} className="text-red-500 font-bold text-xs hover:text-red-700 px-3 py-1">DELETE</button>
           </div>
         ))}
       </div>
@@ -93,4 +126,4 @@ const AdminDashboardPage: React.FC = () => {
   );
 };
 
-export default AdminDashboardPage;
+export default AdminDashboard;

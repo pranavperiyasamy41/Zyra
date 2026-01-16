@@ -12,10 +12,13 @@ import InventoryPage from "./pages/InventoryPage";
 import SalesPage from "./pages/SalesPage";
 import NotesPage from "./pages/NotesPage";
 import SettingsPage from "./pages/SettingsPage";
+import SupportPage from "./pages/SupportPage"; // 👈 NEW IMPORT
 
 // Admin Pages
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminUsersPage from "./pages/AdminUsersPage";
+import AdminAuditLogs from "./pages/AdminAuditLogs"; // 👈 NEW IMPORT
+import AdminSupportPage from "./pages/AdminSupportPage"; // 👈 NEW IMPORT
 
 const router = createBrowserRouter([
   // --- PUBLIC ROUTES ---
@@ -40,10 +43,13 @@ const router = createBrowserRouter([
       { path: "sales", element: <SalesPage /> },
       { path: "notes", element: <NotesPage /> },
       { path: "settings", element: <SettingsPage /> },
+      { path: "support", element: <SupportPage /> }, // 👈 NEW ROUTE
 
-      // ✅ ADMIN ROUTES (Now inside the layout!)
+      // ADMIN ROUTES
       { path: "admin-dashboard", element: <AdminDashboard /> },
       { path: "admin-users", element: <AdminUsersPage /> },
+      { path: "admin-logs", element: <AdminAuditLogs /> }, // 👈 NEW ROUTE
+      { path: "admin-support", element: <AdminSupportPage /> }, // 👈 NEW ROUTE
     ],
   },
 ]);

@@ -6,7 +6,6 @@ export const createSale = async (req, res) => {
   try {
     const { items, totalAmount, customerName, customerMobile } = req.body;
 
-    // Validate Input
     if (!items || items.length === 0) {
       return res.status(400).json({ message: "Cart is empty" });
     }
@@ -17,37 +16,26 @@ export const createSale = async (req, res) => {
          return res.status(400).json({ message: `Invalid item in cart: ${item.name}` });
        }
 
-       // Find medicine by ID
        let medicine = await Medicine.findById(item.medicineId);
        
-       // Fallback: If not found by ID, try Name
        if (!medicine) {
-         medicine = await Medicine.findOne({ name: item.name, user: req.user._id });
+          return res.status(404).json({ message: `Stock not found for: ${item.name}` });
        }
 
-       if (!medicine) {
-          return res.status(404).json({ message: `Medicine not found in inventory: ${item.name}` });
-       }
-
-       // 🛡️ SAFEGUARD: Handle "Ghost" Numbers
-       // Ensure we treat existing stock as a number. If missing, treat as 0.
-       const currentStock = Number(medicine.stock) || Number(medicine.quantity) || 0;
+       const currentStock = Number(medicine.stock) || 0;
 
        if (currentStock < item.quantity) {
-         return res.status(400).json({ message: `Insufficient stock for ${item.name}. Available: ${currentStock}` });
+         return res.status(400).json({ 
+             message: `Insufficient stock for ${medicine.name} (${medicine.batchId}). Available: ${currentStock}` 
+         });
        }
 
-       // ✅ Calculate New Stock safely
        const newStock = Math.max(0, currentStock - item.quantity);
 
-       // Update both fields to keep them in sync and clean up the DB
        medicine.stock = newStock;
-       medicine.quantity = newStock; 
-       
        await medicine.save();
     }
 
-    // Create Sale Record
     const sale = new Sale({
       user: req.user._id,
       customerName: customerName || 'Guest',
@@ -85,4 +73,55 @@ export const getLastOrder = async (req, res) => {
     if (!sale) return res.status(404).json({ message: "No history found" });
     res.json(sale);
   } catch (error) { res.status(500).json({ message: "Server Error" }); }
+};
+
+// 4. 🔮 GET AI PREDICTIONS (New!)
+export const getSalesPredictions = async (req, res) => {
+  try {
+    // 1. Get sales from last 30 days
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const sales = await Sale.find({ 
+        user: req.user._id,
+        createdAt: { $gte: thirtyDaysAgo }
+    });
+
+    // 2. Calculate Total Sold per Medicine
+    const salesMap = {}; // { "Dolo 650": 150, "Crosin": 20 }
+    
+    sales.forEach(sale => {
+        sale.items.forEach(item => {
+            salesMap[item.name] = (salesMap[item.name] || 0) + item.quantity;
+        });
+    });
+
+    // 3. Compare with Current Stock to Predict Runout
+    const inventory = await Medicine.find({ user: req.user._id });
+    const predictions = [];
+
+    inventory.forEach(med => {
+        const soldLast30Days = salesMap[med.name] || 0;
+        const dailyVelocity = soldLast30Days / 30; // Avg sold per day
+
+        // Only predict if selling somewhat regularly (> 0.5 per day)
+        if (dailyVelocity > 0.5) {
+            const daysLeft = Math.floor(med.stock / dailyVelocity);
+            
+            if (daysLeft < 7) { // Alert if running out in next 7 days
+                predictions.push({
+                    name: med.name,
+                    daysLeft: daysLeft,
+                    dailyRate: dailyVelocity.toFixed(1),
+                    currentStock: med.stock
+                });
+            }
+        }
+    });
+
+    res.json(predictions.sort((a,b) => a.daysLeft - b.daysLeft)); // Show most urgent first
+  } catch (error) {
+    console.error("Prediction Error:", error);
+    res.status(500).json({ message: "Server Error" });
+  }
 };

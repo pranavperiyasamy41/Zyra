@@ -1,28 +1,33 @@
 import Medicine from '../models/medicine.model.js';
 
 // ==============================
-// 1. ADD MEDICINE (✅ Fixed Validation Error)
+// 1. ADD MEDICINE
 // ==============================
 export const addMedicine = async (req, res) => {
   try {
-    const { name, stock, price, expiryDate } = req.body;
+    const { name, barcode, batchNumber, stock, price, expiryDate } = req.body;
 
     if (!name || !stock || !price || !expiryDate) {
-      return res.status(400).json({ message: "All fields are required" });
+      return res.status(400).json({ message: "Name, Stock, Price, and Expiry are required" });
+    }
+
+    // Check if Batch ID exists
+    if (batchNumber) {
+        const existingBatch = await Medicine.findOne({ user: req.user._id, batchId: batchNumber });
+        if (existingBatch) {
+            return res.status(400).json({ message: `Batch ${batchNumber} already exists. Please update stock instead.` });
+        }
     }
 
     const newMedicine = new Medicine({
       user: req.user._id,
       name,
-      stock,
-      quantity: stock, 
-      price,
+      barcode: barcode || '', // ✅ Save Barcode
+      batchId: batchNumber || `BATCH-${Date.now()}`, 
+      stock: Number(stock),
+      mrp: Number(price),
       expiryDate,
-      category: "General",
-      // 🟢 AUTO-FILL MISSING FIELDS
-      // Since the UI doesn't have these inputs yet, we generate defaults
-      mrp: price, // Default MRP to the selling price
-      batchId: `BATCH-${Date.now()}` // Auto-generate a unique Batch ID
+      category: "General"
     });
 
     const savedMedicine = await newMedicine.save();
@@ -30,7 +35,6 @@ export const addMedicine = async (req, res) => {
 
   } catch (error) {
     console.error("Add Medicine Error:", error);
-    // Send the specific error message from Mongoose to the frontend
     res.status(400).json({ message: error.message || "Server Error" });
   }
 };
@@ -40,7 +44,8 @@ export const addMedicine = async (req, res) => {
 // ==============================
 export const getMedicines = async (req, res) => {
   try {
-    const medicines = await Medicine.find({ user: req.user._id });
+    // Sort by Expiry Date (FIFO)
+    const medicines = await Medicine.find({ user: req.user._id }).sort({ expiryDate: 1 });
     res.json(medicines);
   } catch (error) {
     res.status(500).json({ message: "Server Error" });
@@ -74,13 +79,10 @@ export const updateMedicine = async (req, res) => {
 export const deleteMedicine = async (req, res) => {
   try {
     const medicine = await Medicine.findById(req.params.id);
-
     if (!medicine) return res.status(404).json({ message: "Medicine not found" });
-
     if (medicine.user.toString() !== req.user._id.toString()) {
       return res.status(401).json({ message: "Not authorized" });
     }
-
     await medicine.deleteOne();
     res.json({ message: "Medicine removed" });
   } catch (error) {
@@ -95,7 +97,7 @@ export const getLowStockAlerts = async (req, res) => {
   try {
     const lowStockMedicines = await Medicine.find({
       user: req.user._id,
-      stock: { $lte: 10, $gt: 0 } 
+      stock: { $lte: 10, $gt: 0 }
     });
     res.json(lowStockMedicines);
   } catch (error) {

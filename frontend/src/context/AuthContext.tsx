@@ -1,12 +1,20 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import apiClient from '../api';
 
+// ✅ UPDATED INTERFACE: Now includes Address & License details
 interface User {
   _id: string;
   username: string;
   email: string;
   pharmacyName: string;
   role: string;
+  // New Fields for PDF Invoice
+  address?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+  drugLicense?: string;
+  pharmacyContact?: string;
 }
 
 interface AuthContextType {
