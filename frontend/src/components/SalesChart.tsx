@@ -1,11 +1,12 @@
 import React, { useMemo } from 'react';
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  Tooltip, 
-  CartesianGrid 
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
 } from 'recharts';
 
 interface Sale {
@@ -16,74 +17,85 @@ interface Sale {
 
 interface SalesChartProps {
   sales: Sale[];
+  days?: number; 
 }
 
-const SalesChart: React.FC<SalesChartProps> = ({ sales }) => {
+const SalesChart: React.FC<SalesChartProps> = ({ sales, days = 7 }) => {
   const data = useMemo(() => {
-    // 🛡️ Guard: Ensure sales is an array
-    const safeSales = Array.isArray(sales) ? sales : [];
-    
-    const chartData = [];
-    for (let i = 6; i >= 0; i--) {
+    const lastNDays = [...Array(days)].map((_, i) => {
       const d = new Date();
-      d.setDate(d.getDate() - i);
-      // Handle timezone offset to match database dates correctly
-      const dateString = d.toISOString().split('T')[0];
-      
-      const dailyTotal = safeSales
-        .filter((sale) => sale?.createdAt && sale.createdAt.startsWith(dateString))
-        .reduce((sum, sale) => sum + (sale?.totalAmount || 0), 0);
+      d.setDate(d.getDate() - (days - 1 - i)); 
+      return d;
+    });
 
-      chartData.push({
-        name: d.toLocaleDateString('en-US', { weekday: 'short' }),
-        revenue: dailyTotal,
-      });
-    }
-    return chartData;
-  }, [sales]);
+    return lastNDays.map((date) => {
+      const dateStr = date.toDateString();
+      const dailyTotal = sales
+        .filter((s) => new Date(s.createdAt).toDateString() === dateStr)
+        .reduce((acc, curr) => acc + (curr.totalAmount || 0), 0);
+
+      return {
+        name: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), 
+        value: dailyTotal,
+      };
+    });
+  }, [sales, days]);
 
   return (
-    <div className="w-full bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg border border-gray-100 dark:border-slate-700 overflow-x-auto">
-      <h3 className="text-lg font-bold text-gray-700 dark:text-white mb-4">Weekly Revenue Trend</h3>
-      
-      {/* 🛡️ FIX: Removed ResponsiveContainer to stop the 'useContext' crash */}
-      <div className="flex justify-center">
-        <BarChart width={600} height={300} data={data}>
-          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#374151" opacity={0.1} />
-          <XAxis 
-            dataKey="name" 
-            axisLine={false} 
-            tickLine={false} 
-            tick={{ fill: '#9CA3AF', fontSize: 12 }} 
-            dy={10}
-          />
-          <YAxis 
-            axisLine={false} 
-            tickLine={false} 
-            tick={{ fill: '#9CA3AF', fontSize: 12 }} 
-            tickFormatter={(value: any) => `$${value}`}
-          />
-          <Tooltip 
-            cursor={{ fill: 'transparent' }}
-            contentStyle={{ 
-              borderRadius: '8px', 
-              border: 'none', 
-              boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-              backgroundColor: '#1F2937',
-              color: '#F3F4F6'
-            }}
-            itemStyle={{ color: '#F3F4F6' }}
-            formatter={(value: any) => [`$${value}`, 'Revenue']}
-          />
-          <Bar 
-            dataKey="revenue" 
-            fill="#3B82F6" 
-            radius={[4, 4, 0, 0]} 
-            barSize={40}
-          />
-        </BarChart>
-      </div>
-    </div>
+    <ResponsiveContainer width="100%" height="100%">
+      <AreaChart
+        data={data}
+        margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+      >
+        <defs>
+          <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.8} />
+            <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        
+        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" opacity={0.1} />
+        
+        <XAxis 
+          dataKey="name" 
+          axisLine={false} 
+          tickLine={false} 
+          tick={{ fill: '#9CA3AF', fontSize: 10, fontWeight: 'bold' }} 
+          dy={10}
+          interval={days > 14 ? 2 : 0} 
+        />
+        
+        <YAxis 
+          axisLine={false} 
+          tickLine={false} 
+          tick={{ fill: '#9CA3AF', fontSize: 12 }} 
+          tickFormatter={(value) => `$${value}`}
+        />
+        
+        <Tooltip
+          contentStyle={{
+            backgroundColor: 'rgba(17, 24, 39, 0.9)',
+            border: 'none',
+            borderRadius: '12px',
+            color: '#fff',
+            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)'
+          }}
+          itemStyle={{ color: '#60A5FA' }}
+          // ✅ FIXED: Changed 'value: number' to 'value: any' to satisfy Recharts types
+          formatter={(value: any) => [`$${value.toLocaleString()}`, 'Revenue']}
+          cursor={{ stroke: '#3B82F6', strokeWidth: 1, strokeDasharray: '4 4' }}
+        />
+        
+        <Area
+          type="monotone"
+          dataKey="value"
+          stroke="#3B82F6"
+          strokeWidth={4}
+          fillOpacity={1}
+          fill="url(#colorValue)"
+        />
+      </AreaChart>
+    </ResponsiveContainer>
   );
 };
 

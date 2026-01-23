@@ -16,7 +16,7 @@ const LowStockAlert: React.FC<Props> = ({ count }) => {
         <span className="text-2xl">🚨</span>
       </div>
       
-      {/* ✅ THE FIX: Added '/' before inventory */}
+      {/* ✅ FIXED LINK: Added '/' at the start */}
       <Link 
         to="/inventory?filter=low-stock" 
         className="text-xs font-bold text-red-500 hover:text-red-700 mt-4 block underline decoration-red-500/30"

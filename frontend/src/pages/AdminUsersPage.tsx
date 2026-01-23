@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import useSWR from 'swr';
 import apiClient from '../api';
 import { useAuth } from '../context/AuthContext';
+// 🆕 Icons
+import { AlertTriangle, Users, ShieldCheck, Trash2, CheckCircle } from 'lucide-react';
 
 interface AppUser {
   _id: string;
@@ -9,7 +11,7 @@ interface AppUser {
   username: string;
   role: string;
   pharmacyName: string;
-  isApproved: boolean; // mapped from status === 'APPROVED'
+  isApproved: boolean; 
   status: string;
 }
 
@@ -18,16 +20,12 @@ const fetcher = (url: string) => apiClient.get(url).then(res => res.data);
 const AdminUsersPage: React.FC = () => {
   const { user } = useAuth();
   
-  // Fetch all users
   const { data: users, error, isLoading, mutate } = useSWR<AppUser[]>('/admin/users', fetcher); 
   
-  // TABS STATE: 'pending' or 'all'
   const [activeTab, setActiveTab] = useState<'pending' | 'all'>('pending');
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [newRole, setNewRole] = useState('');
 
-  // --- DERIVED LISTS ---
-  // We map the backend 'status' to a boolean for easier logic
   const processedUsers = users?.map(u => ({
     ...u,
     isApproved: u.status === 'APPROVED'
@@ -38,23 +36,20 @@ const AdminUsersPage: React.FC = () => {
   
   const displayUsers = activeTab === 'pending' ? pendingUsers : processedUsers;
 
-  // --- ACTIONS ---
-
   const handleApprove = async (userId: string) => {
-      // 1. Optimistic Update (Make it feel instant)
       if (users) {
         const updatedUsers = users.map(u => 
             u._id === userId ? { ...u, status: 'APPROVED' } : u
         );
-        mutate(updatedUsers, false); // Update UI immediately without waiting for server
+        mutate(updatedUsers, false);
       }
 
       try {
           await apiClient.put(`/admin/approve/${userId}`);
-          mutate(); // Re-fetch from server to be sure
+          mutate(); 
       } catch (err: any) {
           alert('Approval failed. Please check connection.');
-          mutate(); // Revert on error
+          mutate(); 
       }
   };
 
@@ -81,7 +76,6 @@ const AdminUsersPage: React.FC = () => {
 
   if (isLoading) return <div className="p-8 dark:text-slate-300 animate-pulse">Loading Management Portal...</div>;
   
-  // Access Control
   if (error || (user && user.role !== 'superadmin' && user.role !== 'admin')) {
     return <div className="p-8 text-red-500 font-bold">⛔ Access Denied</div>;
   }
@@ -94,7 +88,6 @@ const AdminUsersPage: React.FC = () => {
             <p className="text-gray-500 dark:text-gray-400 mt-1">Manage approvals and permissions.</p>
           </div>
           
-          {/* STATS BADGE */}
           <div className="bg-white dark:bg-slate-800 px-4 py-2 rounded-lg shadow border dark:border-slate-700 flex gap-4">
               <div className="text-center">
                   <span className="block text-2xl font-bold text-red-500">{pendingUsers.length}</span>
@@ -112,23 +105,23 @@ const AdminUsersPage: React.FC = () => {
       <div className="flex space-x-1 bg-gray-100 dark:bg-slate-800 p-1 rounded-xl mb-6 w-fit">
         <button
             onClick={() => setActiveTab('pending')}
-            className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${
+            className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${
                 activeTab === 'pending' 
                 ? 'bg-white dark:bg-slate-700 text-red-600 shadow-sm' 
                 : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'
             }`}
         >
-            🚨 Pending Requests ({pendingUsers.length})
+            <AlertTriangle className="w-4 h-4" /> Pending Requests ({pendingUsers.length})
         </button>
         <button
             onClick={() => setActiveTab('all')}
-            className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${
+            className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${
                 activeTab === 'all' 
                 ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-sm' 
                 : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'
             }`}
         >
-            👥 All Users
+            <Users className="w-4 h-4" /> All Users
         </button>
       </div>
 
@@ -154,7 +147,6 @@ const AdminUsersPage: React.FC = () => {
             ) : displayUsers.map((appUser) => (
               <tr key={appUser._id} className="hover:bg-gray-50 dark:hover:bg-slate-700/30 transition-colors">
                 
-                {/* USER INFO */}
                 <td className="px-6 py-4">
                     <div className="flex flex-col">
                         <span className="font-bold text-gray-900 dark:text-white">{appUser.username}</span>
@@ -162,12 +154,10 @@ const AdminUsersPage: React.FC = () => {
                     </div>
                 </td>
                 
-                {/* PHARMACY INFO */}
                 <td className="px-6 py-4 text-sm text-gray-600 dark:text-slate-300">
                     {appUser.pharmacyName || 'N/A'}
                 </td>
                 
-                {/* STATUS BADGE */}
                 <td className="px-6 py-4">
                     {appUser.isApproved ? (
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
@@ -180,7 +170,6 @@ const AdminUsersPage: React.FC = () => {
                     )}
                 </td>
 
-                {/* ROLE EDITOR */}
                 <td className="px-6 py-4">
                     {editingUserId === appUser._id ? (
                         <select
@@ -200,19 +189,16 @@ const AdminUsersPage: React.FC = () => {
                     )}
                 </td>
 
-                {/* ACTIONS */}
                 <td className="px-6 py-4 text-right whitespace-nowrap space-x-3">
-                    {/* APPROVE BUTTON (Only for Pending) */}
                     {!appUser.isApproved && (
                         <button 
                             onClick={() => handleApprove(appUser._id)} 
-                            className="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-lg shadow-green-500/30 transition-all active:scale-95"
+                            className="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-lg shadow-green-500/30 transition-all active:scale-95 flex items-center gap-1 inline-flex"
                         >
-                            ✓ APPROVE
+                            <CheckCircle className="w-3 h-3" /> APPROVE
                         </button>
                     )}
 
-                    {/* EDIT / SAVE ROLE */}
                     {editingUserId === appUser._id ? (
                         <>
                             <button onClick={() => handleRoleChange(appUser._id)} className="text-green-600 font-bold text-xs hover:underline">Save</button>
@@ -222,19 +208,18 @@ const AdminUsersPage: React.FC = () => {
                         <button 
                             onClick={() => { setEditingUserId(appUser._id); setNewRole(appUser.role); }}
                             className="text-blue-600 hover:text-blue-800 font-bold text-xs"
-                            disabled={!appUser.isApproved} // Can't edit role until approved
+                            disabled={!appUser.isApproved} 
                         >
                             EDIT
                         </button>
                     )}
 
-                    {/* DELETE BUTTON */}
                     <button 
                         onClick={() => handleDeleteUser(appUser._id)}
                         disabled={user?._id === appUser._id} 
-                        className="text-red-500 hover:text-red-700 font-bold text-xs disabled:opacity-30"
+                        className="text-red-500 hover:text-red-700 font-bold text-xs disabled:opacity-30 flex items-center gap-1 inline-flex"
                     >
-                        DELETE
+                        <Trash2 className="w-3 h-3" /> DELETE
                     </button>
                 </td>
               </tr>

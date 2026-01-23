@@ -1,6 +1,6 @@
 import User from '../models/user.model.js';
 import Medicine from '../models/medicine.model.js';
-import AuditLog from '../models/auditLog.model.js'; // 👈 NEW IMPORT
+import AuditLog from '../models/auditLog.model.js';
 import sendEmail from '../utils/sendEmail.js';
 
 // 1. GET DASHBOARD METRICS
@@ -63,13 +63,14 @@ export const approveUser = async (req, res) => {
         action: "USER_APPROVED", details: `Approved user: ${user.username}`
     });
 
-    // 3. Send Email
-    const emailSubject = "🎉 Account Approved - Smart Pharmacy";
+    // 3. Send Email (✅ REBRANDED)
+    const emailSubject = "🎉 Account Approved - Zyra";
     const emailHtml = `
-      <h3>Welcome to Smart Pharmacy!</h3>
+      <h3>Welcome to Zyra!</h3>
       <p>Hello <strong>${user.username}</strong>,</p>
       <p>Your account for <strong>${user.pharmacyName}</strong> has been approved.</p>
       <p>You can now login to your dashboard.</p>
+      <p><em>- The Zyra Team</em></p>
     `;
     sendEmail(user.email, emailSubject, emailHtml);
 
@@ -125,10 +126,9 @@ export const updateUserRole = async (req, res) => {
   }
 };
 
-// 7. ✅ GET AUDIT LOGS (NEW)
+// 7. GET AUDIT LOGS
 export const getAuditLogs = async (req, res) => {
   try {
-    // Return last 100 logs
     const logs = await AuditLog.find().sort({ createdAt: -1 }).limit(100);
     res.json(logs);
   } catch (error) {

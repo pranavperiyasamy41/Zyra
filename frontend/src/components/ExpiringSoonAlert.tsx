@@ -16,7 +16,7 @@ const ExpiringSoonAlert: React.FC<Props> = ({ count }) => {
         <span className="text-2xl">⚠️</span>
       </div>
 
-      {/* ✅ THE FIX: Added '/' before inventory */}
+      {/* ✅ FIXED LINK: Added '/' at the start */}
       <Link 
         to="/inventory?filter=expiring" 
         className="text-xs font-bold text-amber-600 hover:text-amber-800 mt-4 block underline decoration-amber-500/30"

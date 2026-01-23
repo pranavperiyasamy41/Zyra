@@ -8,7 +8,8 @@ const LandingPage = () => {
       {/* --- Header --- */}
       <header className="border-b dark:border-slate-700">
         <nav className="container mx-auto flex items-center justify-between p-6">
-          <h1 className="text-2xl font-bold text-blue-600">Smart Pharmacy</h1>
+          {/* ✅ REBRANDED */}
+          <h1 className="text-2xl font-black text-blue-600 tracking-tighter">ZYRA</h1>
           
           <div className="flex items-center space-x-4">
             <Link to="/login" className="text-lg font-medium hover:text-blue-500 dark:text-slate-300 dark:hover:text-blue-400">
@@ -28,12 +29,13 @@ const LandingPage = () => {
       {/* --- Hero Section --- */}
       <main>
         <section className="container mx-auto flex flex-col items-center px-6 py-20 text-center">
+          {/* ✅ REBRANDED */}
           <h2 className="text-5xl font-bold md:text-6xl">
-            Modern Inventory, <span className="text-blue-600">Simplified.</span>
+            Zyra: <span className="text-blue-600">The Intelligent Pharmacy OS.</span>
           </h2>
           <p className="mt-6 max-w-2xl text-lg text-gray-600 dark:text-slate-300">
-            Stop guessing. Start managing. Our smart system helps small pharmacies
-            track stock, manage expiry dates, and get real-time alerts.
+            Stop guessing. Start managing. Zyra helps modern pharmacies
+            track stock, predict demand, and manage sales with AI-powered precision.
           </p>
           <div className="mt-10 flex gap-4 justify-center">
              <Link 
@@ -41,12 +43,6 @@ const LandingPage = () => {
               className="rounded-md bg-blue-600 px-8 py-3 text-xl font-medium text-white hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 shadow-lg shadow-blue-500/30"
             >
               Get Started for Free
-            </Link>
-             <Link 
-              to="/login" 
-              className="rounded-md bg-gray-100 px-8 py-3 text-xl font-medium text-gray-700 hover:bg-gray-200 dark:bg-slate-800 dark:text-white dark:hover:bg-slate-700"
-            >
-              Login
             </Link>
           </div>
         </section>
@@ -84,7 +80,8 @@ const LandingPage = () => {
       {/* --- Footer --- */}
       <footer className="border-t py-10 dark:border-slate-700">
         <div className="container mx-auto flex flex-col items-center justify-between px-6 md:flex-row">
-          <p className="text-gray-600 dark:text-slate-400">© 2025 Smart Pharmacy. All rights reserved.</p>
+          {/* ✅ REBRANDED */}
+          <p className="text-gray-600 dark:text-slate-400">© 2026 Zyra Systems. All rights reserved.</p>
         </div>
       </footer>
     </div>

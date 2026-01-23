@@ -3,7 +3,9 @@ import { useAuth } from './context/AuthContext';
 import ThemeToggle from './components/ThemeToggle';
 
 function App() {
-  const { token, user, logout } = useAuth();
+  // ✅ FIX: Removed 'token' from destructuring. 
+  // We use 'user' to check if logged in.
+  const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -24,7 +26,8 @@ function App() {
 
   return (
     <div className="flex min-h-screen bg-gray-50 dark:bg-slate-900"> 
-      {token && (
+      {/* ✅ FIX: Check 'user' instead of 'token' */}
+      {user && (
         <nav className="flex w-64 flex-col border-r border-gray-200 bg-white dark:border-slate-700 dark:bg-slate-800">
           <div className="flex h-16 items-center justify-between border-b px-4 dark:border-slate-700">
             <h1 className="text-xl font-bold text-blue-600">Smart Pharmacy</h1>
