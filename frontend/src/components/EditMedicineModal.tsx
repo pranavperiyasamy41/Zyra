@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import apiClient from '../api';
+import toast from 'react-hot-toast';
 
 interface EditMedicineModalProps {
   isOpen: boolean;
@@ -45,11 +46,11 @@ const EditMedicineModal: React.FC<EditMedicineModalProps> = ({ isOpen, onClose, 
         expiryDate: formData.expiryDate
       });
       
-      alert('✅ Medicine Updated!');
+      toast.success('Medicine Updated!');
       onSuccess();
       onClose();
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Failed to update medicine');
+      toast.error(error.response?.data?.message || 'Failed to update medicine');
     } finally {
       setLoading(false);
     }

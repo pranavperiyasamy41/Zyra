@@ -8,7 +8,8 @@ export const updateUserProfile = async (req, res) => {
       // 1. Basic Info
       user.username = req.body.username || user.username;
       user.pharmacyName = req.body.pharmacyName || user.pharmacyName;
-      user.email = req.body.email || user.email; // Allow email update if needed
+      user.email = req.body.email || user.email; 
+      user.avatar = req.body.avatar || user.avatar; // 🆕 Avatar Update
 
       // 2. Invoice Settings (Address & License)
       user.address = req.body.address || user.address;
@@ -32,6 +33,7 @@ export const updateUserProfile = async (req, res) => {
         email: updatedUser.email,
         role: updatedUser.role,
         pharmacyName: updatedUser.pharmacyName,
+        avatar: updatedUser.avatar, // 🆕
         // Send back new invoice details
         address: updatedUser.address,
         city: updatedUser.city,

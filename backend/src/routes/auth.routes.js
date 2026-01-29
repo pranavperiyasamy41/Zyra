@@ -1,18 +1,20 @@
 import express from 'express';
 import { 
+  checkUserExists, // 👈 NEW
   sendOtp, 
   verifyOtp, 
   register, 
   login, 
   googleLogin,
   adminLogin,
-  forgotPassword, // 👈 NEW
-  resetPassword   // 👈 NEW
+  forgotPassword, 
+  resetPassword
 } from '../controllers/auth.controller.js';
 
 const router = express.Router();
 
 // Email Auth Flow
+router.post('/check-user', checkUserExists); // 👈 NEW
 router.post('/send-otp', sendOtp);
 router.post('/verify-otp', verifyOtp);
 

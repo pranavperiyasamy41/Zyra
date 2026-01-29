@@ -4,6 +4,7 @@ import apiClient from '../api';
 import { useAuth } from '../context/AuthContext';
 // 🆕 Icons
 import { AlertTriangle, Users, ShieldCheck, Trash2, CheckCircle } from 'lucide-react';
+import toast from 'react-hot-toast'; // 🆕 Import
 
 interface AppUser {
   _id: string;
@@ -47,8 +48,9 @@ const AdminUsersPage: React.FC = () => {
       try {
           await apiClient.put(`/admin/approve/${userId}`);
           mutate(); 
+          toast.success("User Approved!");
       } catch (err: any) {
-          alert('Approval failed. Please check connection.');
+          toast.error('Approval failed. Please check connection.');
           mutate(); 
       }
   };
@@ -59,8 +61,9 @@ const AdminUsersPage: React.FC = () => {
     try {
         await apiClient.delete(`/admin/users/${userId}`);
         mutate(); 
+        toast.success("User Deleted");
     } catch (err: any) {
-        alert('Failed to delete user.');
+        toast.error('Failed to delete user.');
     }
   };
 
@@ -69,8 +72,9 @@ const AdminUsersPage: React.FC = () => {
         await apiClient.put(`/admin/users/${userId}`, { role: newRole });
         mutate(); 
         setEditingUserId(null); 
+        toast.success("Role Updated");
     } catch (err: any) {
-        alert('Failed to update role.');
+        toast.error('Failed to update role.');
     }
   };
 

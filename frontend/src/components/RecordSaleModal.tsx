@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import useSWR from 'swr';
 import apiClient from '../api';
+import toast from 'react-hot-toast'; // 🆕 IMPORT
 // 🆕 Icons
 import { 
   ShoppingCart, 
@@ -15,7 +16,8 @@ import {
   X 
 } from 'lucide-react';
 
-// --- Interfaces ---
+// ... (keep existing interfaces)
+
 interface Medicine {
   _id: string;
   name: string;
@@ -91,15 +93,15 @@ const RecordSaleModal: React.FC<RecordSaleModalProps> = ({ isOpen, onClose, onSu
     const medToAdd = overrideMed || selectedMedicine;
 
     if (!medToAdd) return;
-    if (qtyInput <= 0) return alert("Quantity must be at least 1");
-    if (qtyInput > medToAdd.stock) return alert(`Only ${medToAdd.stock} units available in this batch!`);
+    if (qtyInput <= 0) return toast.error("Quantity must be at least 1");
+    if (qtyInput > medToAdd.stock) return toast.error(`Only ${medToAdd.stock} units available in this batch!`);
 
     const existingItemIndex = cart.findIndex(item => item.medicineId === medToAdd._id);
     
     if (existingItemIndex > -1) {
       const newQty = cart[existingItemIndex].quantity + qtyInput;
       if (newQty > medToAdd.stock) {
-        return alert(`Cannot add more. Total would exceed batch stock of ${medToAdd.stock}.`);
+        return toast.error(`Cannot add more. Total would exceed batch stock of ${medToAdd.stock}.`);
       }
       handleUpdateQuantity(existingItemIndex, newQty);
     } else {
@@ -201,11 +203,11 @@ const RecordSaleModal: React.FC<RecordSaleModalProps> = ({ isOpen, onClose, onSu
 
   // 5. Submit Sale
   const handleSubmit = async () => {
-    if (cart.length === 0) return alert("Cart is empty!");
+    if (cart.length === 0) return toast.error("Cart is empty!");
     
     // 📱 Mobile Validation
     if (customerMobile && !/^\d{10}$/.test(customerMobile)) {
-        return alert("Please enter a valid 10-digit mobile number.");
+        return toast.error("Please enter a valid 10-digit mobile number.");
     }
 
     setLoading(true);
@@ -224,7 +226,7 @@ const RecordSaleModal: React.FC<RecordSaleModalProps> = ({ isOpen, onClose, onSu
       };
 
       await apiClient.post('/sales', payload);
-      alert("✅ Sale Recorded Successfully!");
+      toast.success("Sale Recorded Successfully!");
       setCart([]);
       setCustomerName('');
       setCustomerMobile('');
@@ -233,7 +235,7 @@ const RecordSaleModal: React.FC<RecordSaleModalProps> = ({ isOpen, onClose, onSu
       onClose();
     } catch (err: any) {
       console.error(err);
-      alert(err.response?.data?.message || "Failed to record sale.");
+      toast.error(err.response?.data?.message || "Failed to record sale.");
       setLoading(false);
     }
   };

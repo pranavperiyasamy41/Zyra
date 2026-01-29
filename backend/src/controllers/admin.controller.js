@@ -129,7 +129,18 @@ export const updateUserRole = async (req, res) => {
 // 7. GET AUDIT LOGS
 export const getAuditLogs = async (req, res) => {
   try {
-    const logs = await AuditLog.find().sort({ createdAt: -1 }).limit(100);
+    const { action, search } = req.query;
+    let query = {};
+
+    if (action) {
+      query.action = action;
+    }
+
+    if (search) {
+      query.actorName = { $regex: search, $options: 'i' };
+    }
+
+    const logs = await AuditLog.find(query).sort({ createdAt: -1 }).limit(100);
     res.json(logs);
   } catch (error) {
     res.status(500).json({ message: "Server Error" });

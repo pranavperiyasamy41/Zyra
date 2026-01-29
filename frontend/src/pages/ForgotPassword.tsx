@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import apiClient from '../api';
+import toast from 'react-hot-toast';
 
 const ForgotPasswordPage = () => {
   const navigate = useNavigate();
@@ -19,9 +20,9 @@ const ForgotPasswordPage = () => {
     try {
       await apiClient.post('/auth/forgot-password', { email });
       setStep(2);
-      // Removed alert for cleaner UX
+      toast.success('OTP sent to email');
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to send OTP');
+      toast.error(err.response?.data?.message || 'Failed to send OTP');
     } finally {
       setLoading(false);
     }
@@ -33,10 +34,10 @@ const ForgotPasswordPage = () => {
     setLoading(true);
     try {
       await apiClient.post('/auth/reset-password', { email, otp, newPassword });
-      alert('🎉 Password Reset Successful! Please Login.');
+      toast.success('Password Reset Successful! Please Login.');
       navigate('/login');
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to reset password');
+      toast.error(err.response?.data?.message || 'Failed to reset password');
     } finally {
       setLoading(false);
     }

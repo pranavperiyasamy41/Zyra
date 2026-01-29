@@ -1,23 +1,24 @@
 import React, { useState } from 'react';
 import useSWR from 'swr';
 import apiClient from '../api';
+import toast from 'react-hot-toast';
 
 const fetcher = (url: string) => apiClient.get(url).then(res => res.data);
 
 const AdminSupportPage = () => {
-  const { data: tickets, mutate } = useSWR('/admin/tickets', fetcher);
+  const { data: tickets, mutate } = useSWR('/tickets/all', fetcher);
   const [replyText, setReplyText] = useState('');
   const [selectedTicket, setSelectedTicket] = useState<any>(null);
 
   const handleResolve = async () => {
     if (!selectedTicket || !replyText) return;
     try {
-        await apiClient.put(`/admin/tickets/${selectedTicket._id}/resolve`, { reply: replyText });
-        alert("✅ Ticket Resolved!");
+        await apiClient.put(`/tickets/${selectedTicket._id}/resolve`, { reply: replyText });
+        toast.success("Ticket Resolved!");
         setReplyText('');
         setSelectedTicket(null);
         mutate();
-    } catch(err) { alert("Failed to resolve"); }
+    } catch(err) { toast.error("Failed to resolve"); }
   };
 
   if (!tickets) return <div className="p-8 text-white">Loading Tickets...</div>;

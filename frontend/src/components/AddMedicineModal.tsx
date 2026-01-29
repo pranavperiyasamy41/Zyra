@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import apiClient from '../api';
+import toast from 'react-hot-toast';
 
 interface AddMedicineModalProps {
   isOpen: boolean;
@@ -32,12 +33,12 @@ const AddMedicineModal: React.FC<AddMedicineModalProps> = ({ isOpen, onClose, on
         expiryDate: formData.expiryDate
       });
       
-      alert('✅ Stock Added Successfully!');
+      toast.success('Stock Added Successfully!');
       setFormData({ name: '', barcode: '', batchNumber: '', quantity: '', price: '', expiryDate: '' });
       onSuccess();
       onClose();
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Failed to add medicine');
+      toast.error(error.response?.data?.message || 'Failed to add medicine');
     } finally {
       setLoading(false);
     }

@@ -76,8 +76,11 @@ const DashboardPage: React.FC = () => {
   // --- Fetch Data ---
   const { data: serverStats, mutate: mutateStats } = useSWR<DashboardStats>('/dashboard/stats', fetcher);
   const { data: inventory = [], mutate: mutateInventory } = useSWR<Medicine[]>('/medicines', fetcher);
-  const { data: sales = [], mutate: mutateSales } = useSWR<Sale[]>('/sales', fetcher);
+  const { data: salesData, mutate: mutateSales } = useSWR('/sales', fetcher);
   const { data: announcements = [] } = useSWR<Announcement[]>('/announcements', fetcher);
+
+  // Extract sales array from paginated response
+  const sales = useMemo(() => salesData?.data || [], [salesData]);
 
   // --- Stats Logic ---
   const lists = useMemo(() => {
@@ -119,17 +122,17 @@ const DashboardPage: React.FC = () => {
   };
 
   return (
-    <div className="relative min-h-screen bg-gray-50 dark:bg-slate-900 transition-colors duration-300">
+    <div className="relative min-h-screen bg-transparent transition-colors duration-300">
       
       {/* HEADER */}
-      <header className="sticky top-0 z-30 backdrop-blur-xl bg-white/70 dark:bg-slate-900/80 border-b border-gray-200 dark:border-slate-800 p-6 lg:p-8 flex flex-col md:flex-row justify-between md:items-end gap-4 shadow-sm transition-all">
+      <header className="sticky top-0 z-30 backdrop-blur-2xl bg-white/60 dark:bg-slate-900/60 border-b border-white/20 dark:border-slate-800 p-6 lg:p-8 flex flex-col md:flex-row justify-between md:items-end gap-4 shadow-sm transition-all">
         <div>
-          <h1 className="text-4xl font-black text-gray-900 dark:text-white uppercase tracking-tighter">
+          <h1 className="text-4xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">
             {user?.pharmacyName || 'My Pharmacy'}
           </h1>
           <div className="flex items-center gap-2 mt-1">
              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-             <p className="text-gray-500 font-bold text-sm tracking-wide">OPERATOR: <span className="text-blue-600 dark:text-blue-400">{user?.username}</span></p>
+             <p className="text-slate-500 font-bold text-sm tracking-wide">OPERATOR: <span className="text-blue-600 dark:text-blue-400">{user?.username}</span></p>
           </div>
         </div>
         
@@ -163,7 +166,7 @@ const DashboardPage: React.FC = () => {
 
         {/* FINANCIAL TRIAD (With Icons & Rupee) */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="relative group p-6 rounded-3xl bg-white dark:bg-slate-800/50 border border-gray-100 dark:border-slate-700 hover:border-emerald-500/50 transition-all duration-300 shadow-xl dark:shadow-none overflow-hidden">
+            <div className="relative group p-6 rounded-[2rem] bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 dark:border-slate-800 hover:border-emerald-500/50 transition-all duration-300 shadow-2xl dark:shadow-none overflow-hidden">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl -mr-10 -mt-10 group-hover:bg-emerald-500/20 transition-all"></div>
                 <div className="relative z-10">
                     <div className="flex justify-between items-start mb-4">
@@ -172,12 +175,12 @@ const DashboardPage: React.FC = () => {
                         </div>
                         <span className="text-xs font-black text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded-lg uppercase tracking-wider">Today</span>
                     </div>
-                    <h3 className="text-4xl font-black text-gray-900 dark:text-white mb-1">{formatRupee(stats.revenueToday)}</h3>
-                    <p className="text-gray-400 text-xs font-medium">Daily Performance</p>
+                    <h3 className="text-4xl font-black text-slate-900 dark:text-white mb-1">{formatRupee(stats.revenueToday)}</h3>
+                    <p className="text-slate-400 text-xs font-medium">Daily Performance</p>
                 </div>
             </div>
 
-            <div className="relative group p-6 rounded-3xl bg-white dark:bg-slate-800/50 border border-gray-100 dark:border-slate-700 hover:border-blue-500/50 transition-all duration-300 shadow-xl dark:shadow-none overflow-hidden">
+            <div className="relative group p-6 rounded-[2rem] bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 dark:border-slate-800 hover:border-blue-500/50 transition-all duration-300 shadow-2xl dark:shadow-none overflow-hidden">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl -mr-10 -mt-10 group-hover:bg-blue-500/20 transition-all"></div>
                 <div className="relative z-10">
                     <div className="flex justify-between items-start mb-4">
@@ -186,12 +189,12 @@ const DashboardPage: React.FC = () => {
                         </div>
                         <span className="text-xs font-black text-blue-500 bg-blue-500/10 px-2 py-1 rounded-lg uppercase tracking-wider">Month</span>
                     </div>
-                    <h3 className="text-4xl font-black text-gray-900 dark:text-white mb-1">{formatRupee(stats.revenueMonth)}</h3>
-                    <p className="text-gray-400 text-xs font-medium">Monthly Target</p>
+                    <h3 className="text-4xl font-black text-slate-900 dark:text-white mb-1">{formatRupee(stats.revenueMonth)}</h3>
+                    <p className="text-slate-400 text-xs font-medium">Monthly Target</p>
                 </div>
             </div>
 
-            <div className="relative group p-6 rounded-3xl bg-white dark:bg-slate-800/50 border border-gray-100 dark:border-slate-700 hover:border-purple-500/50 transition-all duration-300 shadow-xl dark:shadow-none overflow-hidden">
+            <div className="relative group p-6 rounded-[2rem] bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 dark:border-slate-800 hover:border-purple-500/50 transition-all duration-300 shadow-2xl dark:shadow-none overflow-hidden">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl -mr-10 -mt-10 group-hover:bg-purple-500/20 transition-all"></div>
                 <div className="relative z-10">
                     <div className="flex justify-between items-start mb-4">
@@ -200,27 +203,27 @@ const DashboardPage: React.FC = () => {
                         </div>
                         <span className="text-xs font-black text-purple-500 bg-purple-500/10 px-2 py-1 rounded-lg uppercase tracking-wider">Lifetime</span>
                     </div>
-                    <h3 className="text-4xl font-black text-gray-900 dark:text-white mb-1">{formatRupee(stats.revenue)}</h3>
-                    <p className="text-gray-400 text-xs font-medium">Total Business Value</p>
+                    <h3 className="text-4xl font-black text-slate-900 dark:text-white mb-1">{formatRupee(stats.revenue)}</h3>
+                    <p className="text-slate-400 text-xs font-medium">Total Business Value</p>
                 </div>
             </div>
         </div>
 
-        {/* ALERTS ROW (Inline Logic Preserved) */}
+        {/* ALERTS ROW */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
             
             {/* LOW STOCK CARD */}
             <div className="h-full">
                <div 
                  onClick={() => navigate('/inventory?filter=low-stock')}
-                 className="relative h-full overflow-hidden rounded-3xl p-6 cursor-pointer group border border-pink-500/30 bg-gradient-to-br from-pink-500/10 to-rose-500/10 hover:from-pink-500/20 hover:to-rose-500/20 transition-all flex flex-col justify-between"
+                 className="relative h-full overflow-hidden rounded-[2rem] p-6 cursor-pointer group border border-pink-500/30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-2xl hover:scale-[1.02] transition-all flex flex-col justify-between"
                >
                   <div className="flex justify-between items-start">
                       <div>
                         <p className="text-xs font-black text-pink-500 uppercase tracking-widest mb-1">Low Stock</p>
                         <div className="flex items-baseline gap-2">
-                            <span className="text-4xl font-black text-white">{stats.lowStock}</span>
-                            <span className="text-sm text-gray-400 font-bold uppercase">Items</span>
+                            <span className="text-4xl font-black text-slate-900 dark:text-white">{stats.lowStock}</span>
+                            <span className="text-sm text-slate-400 font-bold uppercase">Items</span>
                         </div>
                       </div>
                       <div className="bg-pink-500/20 p-2 rounded-xl text-pink-500 animate-pulse">
@@ -229,7 +232,7 @@ const DashboardPage: React.FC = () => {
                   </div>
                   
                   <div className="mt-6 pt-4 border-t border-pink-500/20 flex justify-between items-end">
-                      <p className="text-xs text-pink-300 italic">Action needed</p>
+                      <p className="text-xs text-pink-400 italic">Action needed</p>
                       <span className="text-xs font-bold text-pink-500 group-hover:translate-x-1 transition-transform flex items-center gap-1">
                           View Inventory <ArrowRight className="w-3 h-3" />
                       </span>
@@ -241,14 +244,14 @@ const DashboardPage: React.FC = () => {
             <div className="h-full">
               <div 
                 onClick={() => navigate('/inventory?filter=expiring')}
-                className="relative h-full overflow-hidden rounded-3xl p-6 cursor-pointer group border border-orange-500/30 bg-gradient-to-br from-orange-500/10 to-red-500/10 hover:from-orange-500/20 hover:to-red-500/20 transition-all flex flex-col justify-between"
+                className="relative h-full overflow-hidden rounded-[2rem] p-6 cursor-pointer group border border-orange-500/30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-2xl hover:scale-[1.02] transition-all flex flex-col justify-between"
               >
                 <div className="flex justify-between items-start">
                     <div>
                       <p className="text-xs font-black text-orange-500 uppercase tracking-widest mb-1">Expiry Risk</p>
                       <div className="flex items-baseline gap-2">
-                          <span className="text-4xl font-black text-white">{stats.expiring}</span>
-                          <span className="text-sm text-gray-400 font-bold uppercase">Items</span>
+                          <span className="text-4xl font-black text-slate-900 dark:text-white">{stats.expiring}</span>
+                          <span className="text-sm text-slate-400 font-bold uppercase">Items</span>
                       </div>
                     </div>
                     <div className="bg-orange-500/20 p-2 rounded-xl text-orange-500 animate-pulse">
@@ -274,12 +277,12 @@ const DashboardPage: React.FC = () => {
             </div>
 
             {/* Active Stock */}
-            <div className="h-full p-6 rounded-3xl bg-white dark:bg-slate-800/50 border border-gray-100 dark:border-slate-700 shadow-xl dark:shadow-none flex flex-col justify-between">
+            <div className="h-full p-6 rounded-[2rem] bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 dark:border-slate-700 shadow-2xl dark:shadow-none flex flex-col justify-between">
                 <div>
-                   <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Total Inventory</p>
+                   <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Total Inventory</p>
                    <div className="flex items-baseline gap-2">
-                      <span className="text-4xl font-black text-gray-900 dark:text-white">{stats.totalStock}</span>
-                      <span className="text-sm text-gray-400 font-bold uppercase">Medicines</span>
+                      <span className="text-4xl font-black text-slate-900 dark:text-white">{stats.totalStock}</span>
+                      <span className="text-sm text-slate-400 font-bold uppercase">Medicines</span>
                    </div>
                 </div>
                 <div className="flex justify-end mt-4">
@@ -291,13 +294,13 @@ const DashboardPage: React.FC = () => {
         </div>
 
         {/* MAIN CHART */}
-        <div className="bg-white dark:bg-slate-800/50 border border-gray-100 dark:border-slate-700 rounded-3xl p-6 shadow-xl dark:shadow-none overflow-hidden">
+        <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 dark:border-slate-700 rounded-[2rem] p-6 shadow-2xl dark:shadow-none overflow-hidden">
             <div className="flex justify-between items-center mb-6">
-                <h3 className="font-black text-gray-900 dark:text-white uppercase text-sm tracking-widest flex items-center gap-2">
+                <h3 className="font-black text-slate-900 dark:text-white uppercase text-sm tracking-widest flex items-center gap-2">
                   <BarChart3 className="w-4 h-4 text-blue-500" /> Revenue Trends
                 </h3>
                 <select 
-                  className="bg-gray-100 dark:bg-slate-900 border-none text-xs font-bold rounded-lg px-3 py-1 text-gray-500 outline-none"
+                  className="bg-slate-100 dark:bg-slate-900 border-none text-xs font-bold rounded-lg px-3 py-1 text-slate-500 outline-none"
                   value={chartDays}
                   onChange={(e) => setChartDays(Number(e.target.value))}
                 >
@@ -315,9 +318,9 @@ const DashboardPage: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           
           {/* Top Selling */}
-          <div className="bg-white dark:bg-slate-800/50 border border-gray-100 dark:border-slate-700 rounded-3xl p-6 shadow-xl dark:shadow-none h-full">
+          <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 dark:border-slate-700 rounded-[2rem] p-6 shadow-2xl dark:shadow-none h-full">
             <div className="flex justify-between items-center mb-6 border-b border-gray-100 dark:border-slate-700 pb-4">
-              <h3 className="font-black dark:text-white uppercase text-sm tracking-widest flex items-center gap-2">
+              <h3 className="font-black text-slate-900 dark:text-white uppercase text-sm tracking-widest flex items-center gap-2">
                 <Flame className="w-4 h-4 text-orange-500" /> Top Movers
               </h3>
             </div>
@@ -326,46 +329,46 @@ const DashboardPage: React.FC = () => {
                 {lists.topSelling.map((item, index) => (
                 <div key={index} className="flex justify-between items-center group">
                   <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm transition-transform group-hover:scale-110 ${index === 0 ? 'bg-yellow-500 text-black shadow-lg shadow-yellow-500/30' : index === 1 ? 'bg-gray-300 text-gray-800' : index === 2 ? 'bg-orange-400 text-white' : 'bg-slate-700 text-slate-400'}`}>
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm transition-transform group-hover:scale-110 ${index === 0 ? 'bg-yellow-500 text-black shadow-lg shadow-yellow-500/30' : index === 1 ? 'bg-slate-300 text-slate-800' : index === 2 ? 'bg-orange-400 text-white' : 'bg-slate-700 text-slate-400'}`}>
                       #{index + 1}
                     </div>
                     <div>
-                        <p className="text-sm font-bold dark:text-white capitalize">{item.name}</p>
-                        <p className="text-[10px] text-gray-400 uppercase font-bold">Best Seller</p>
+                        <p className="text-sm font-bold text-slate-900 dark:text-white capitalize">{item.name}</p>
+                        <p className="text-[10px] text-slate-400 uppercase font-bold">Best Seller</p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <span className="block font-black text-lg dark:text-white">{item.count}</span>
-                    <span className="text-[10px] text-gray-500 uppercase font-bold">Units Sold</span>
+                    <span className="block font-black text-lg text-slate-900 dark:text-white">{item.count}</span>
+                    <span className="text-[10px] text-slate-500 uppercase font-bold">Units Sold</span>
                   </div>
                 </div>
               ))}
               </div>
-            ) : <div className="text-center py-10 text-gray-400 text-sm italic">No sales data yet.</div>}
+            ) : <div className="text-center py-10 text-slate-400 text-sm italic">No sales data yet.</div>}
           </div>
           
           {/* Recent Arrivals */}
-          <div className="bg-white dark:bg-slate-800/50 border border-gray-100 dark:border-slate-700 rounded-3xl p-6 shadow-xl dark:shadow-none h-full">
+          <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 dark:border-slate-700 rounded-[2rem] p-6 shadow-2xl dark:shadow-none h-full">
             <div className="flex justify-between items-center mb-6 border-b border-gray-100 dark:border-slate-700 pb-4">
-              <h3 className="font-black dark:text-white uppercase text-sm tracking-widest flex items-center gap-2">
+              <h3 className="font-black text-slate-900 dark:text-white uppercase text-sm tracking-widest flex items-center gap-2">
                 <History className="w-4 h-4 text-indigo-500" /> Recent Log
               </h3>
             </div>
             {lists.recentM.length > 0 ? (
                 <div className="space-y-3">
                     {lists.recentM.map(m => (
-                    <div key={m._id} className="flex justify-between items-center p-3 rounded-xl hover:bg-white/5 transition-colors border border-transparent hover:border-gray-700">
+                    <div key={m._id} className="flex justify-between items-center p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors border border-transparent hover:border-gray-200 dark:hover:border-gray-700">
                         <div>
-                            <p className="text-sm font-bold dark:text-gray-200">{m.name}</p>
-                            <p className="text-[10px] text-gray-500 font-mono">{new Date(m.createdAt).toLocaleDateString()}</p>
+                            <p className="text-sm font-bold text-slate-900 dark:text-slate-200">{m.name}</p>
+                            <p className="text-[10px] text-slate-500 font-mono">{new Date(m.createdAt).toLocaleDateString()}</p>
                         </div>
-                        <span className="text-xs font-black text-indigo-400 bg-indigo-500/10 px-3 py-1 rounded-lg border border-indigo-500/20 flex items-center gap-1">
+                        <span className="text-xs font-black text-indigo-500 bg-indigo-50 dark:bg-indigo-500/10 px-3 py-1 rounded-lg border border-indigo-100 dark:border-indigo-500/20 flex items-center gap-1">
                           <Package className="w-3 h-3" /> +{m.quantity ?? m.stock}
                         </span>
                     </div>
                     ))}
                 </div>
-            ) : <p className="text-center py-10 text-gray-400 text-sm italic">No inventory added yet.</p>}
+            ) : <p className="text-center py-10 text-slate-400 text-sm italic">No inventory added yet.</p>}
           </div>
         </div>
 

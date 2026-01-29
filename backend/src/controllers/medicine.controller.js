@@ -123,6 +123,8 @@ export const getExpiryAlerts = async (req, res) => {
   }
 };
 
+
+
 // ==============================
 // 7. GET OUT OF STOCK ALERTS
 // ==============================
@@ -135,5 +137,61 @@ export const getOutOfStockAlerts = async (req, res) => {
     res.json(outOfStockMedicines);
   } catch (error) {
     res.status(500).json({ message: "Server Error" });
+  }
+};
+
+// ==============================
+// 8. BULK ADD MEDICINES (Upsert)
+// ==============================
+export const bulkAddMedicines = async (req, res) => {
+  try {
+    const medicines = req.body; 
+
+    if (!Array.isArray(medicines) || medicines.length === 0) {
+      return res.status(400).json({ message: "Invalid data. Expected an array of medicines." });
+    }
+
+    const operations = medicines.map(item => {
+        // If batchId is missing or empty, generate a new one. 
+        // Note: This means purely new items without IDs in CSV will be created.
+        // Existing items with IDs will be updated.
+        const batchId = item.batchId && item.batchId.trim() !== '' 
+            ? item.batchId 
+            : `BATCH-${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
+
+        return {
+            updateOne: {
+                filter: { user: req.user._id, batchId: batchId },
+                update: { 
+                    $set: { 
+                        name: item.name,
+                        barcode: item.barcode || '',
+                        stock: Number(item.stock),
+                        mrp: Number(item.mrp || item.price), // Handle both keys if CSV headers vary
+                        expiryDate: item.expiryDate,
+                        category: item.category || "General",
+                        user: req.user._id,
+                        batchId: batchId
+                    } 
+                },
+                upsert: true
+            }
+        };
+    });
+
+    const result = await Medicine.bulkWrite(operations);
+    
+    // Calculate stats
+    const inserted = result.upsertedCount + result.insertedCount;
+    const updated = result.modifiedCount; // Approximate, matched but not modified are not counted here usually
+
+    res.status(201).json({ 
+        message: `Processed ${medicines.length} items. (Inserted: ${inserted}, Updated: ${updated})`, 
+        count: medicines.length 
+    });
+
+  } catch (error) {
+    console.error("Bulk Add Error:", error);
+    res.status(400).json({ message: `Import failed: ${error.message}` });
   }
 };

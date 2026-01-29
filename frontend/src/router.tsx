@@ -1,4 +1,5 @@
 import { createBrowserRouter } from "react-router-dom";
+import Root from "./pages/Root";
 import LandingPage from "./pages/LandingPage";
 import Login from "./pages/Login";
 import AdminLogin from "./pages/AdminLogin"; // 🆕 IMPORT
@@ -14,6 +15,7 @@ import SalesPage from "./pages/SalesPage";
 import NotesPage from "./pages/NotesPage";
 import SettingsPage from "./pages/SettingsPage";
 import SupportPage from "./pages/SupportPage";
+import SuppliersPage from "./pages/SuppliersPage"; // 🆕 IMPORT
 
 // Admin Pages
 import AdminDashboard from "./pages/AdminDashboard";
@@ -23,7 +25,7 @@ import AdminSupportPage from "./pages/AdminSupportPage";
 
 const router = createBrowserRouter([
   // --- PUBLIC ROUTES ---
-  { path: "/", element: <LandingPage /> },
+  { path: "/", element: <Root /> },
   { path: "/landing", element: <LandingPage /> },
   { path: "/login", element: <Login /> },
   
@@ -45,6 +47,7 @@ const router = createBrowserRouter([
       // Standard User Routes
       { path: "dashboard", element: <Dashboard /> },
       { path: "inventory", element: <InventoryPage /> },
+      { path: "suppliers", element: <SuppliersPage /> }, // 🆕 NEW
       { path: "sales", element: <SalesPage /> },
       { path: "notes", element: <NotesPage /> },
       { path: "settings", element: <SettingsPage /> },

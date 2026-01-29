@@ -66,6 +66,17 @@ const getEmailTemplate = (otp, type) => {
 // ==========================================
 // AUTH CONTROLLERS (sendOtp, verifyOtp, register, etc.)
 // ==========================================
+export const checkUserExists = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+    res.json({ exists: !!user });
+  } catch (error) {
+    console.error("Check User Error:", error);
+    res.status(500).json({ message: "Server Error" });
+  }
+};
+
 export const sendOtp = async (req, res) => {
   try {
     const { email } = req.body;
@@ -101,9 +112,13 @@ export const register = async (req, res) => {
     const finalUsername = username || fullName;
 
     if (authProvider === 'google') {
-       const ticket = await client.verifyIdToken({ idToken: googleToken, audience: process.env.GOOGLE_CLIENT_ID });
-       const payload = ticket.getPayload();
-       if (payload.email !== email) return res.status(400).json({ message: "Email mismatch." });
+       // 🟢 NEW: Verify Access Token via Google API
+       const googleUser = await fetch(`https://www.googleapis.com/oauth2/v3/userinfo`, {
+          headers: { Authorization: `Bearer ${googleToken}` }
+       }).then(res => res.json());
+
+       if (!googleUser.email) return res.status(400).json({ message: "Invalid Google Token." });
+       if (googleUser.email !== email) return res.status(400).json({ message: "Email mismatch." });
     } else {
        const validOtp = await Otp.findOne({ email, otp });
        if (!validOtp) return res.status(400).json({ message: "Invalid or Expired OTP." });
@@ -160,8 +175,15 @@ export const login = async (req, res) => {
 export const googleLogin = async (req, res) => {
   try {
     const { token } = req.body;
-    const ticket = await client.verifyIdToken({ idToken: token, audience: process.env.GOOGLE_CLIENT_ID });
-    const { email } = ticket.getPayload();
+    
+    // 🟢 NEW: Verify Access Token
+    const googleUser = await fetch(`https://www.googleapis.com/oauth2/v3/userinfo`, {
+        headers: { Authorization: `Bearer ${token}` }
+    }).then(res => res.json());
+
+    if (!googleUser.email) return res.status(400).json({ message: "Invalid Google Token" });
+    
+    const email = googleUser.email;
 
     const user = await User.findOne({ email });
     if (!user) return res.status(400).json({ message: "User not registered. Please Sign Up first." });

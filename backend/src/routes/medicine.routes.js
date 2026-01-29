@@ -9,7 +9,8 @@ import {
   deleteMedicine,
   getLowStockAlerts,
   getExpiryAlerts,
-  getOutOfStockAlerts
+  getOutOfStockAlerts,
+  bulkAddMedicines // 🆕 IMPORT
 } from '../controllers/medicine.controller.js';
 
 const router = Router();
@@ -20,6 +21,9 @@ const router = Router();
 router.route('/')
   .get(protect, getMedicines)   // Gets all medicines
   .post(protect, addMedicine);  // Adds a new medicine
+
+// 🆕 Bulk Import
+router.post('/bulk', protect, bulkAddMedicines);
 
 // Alert routes
 // These must come BEFORE the /:id route
