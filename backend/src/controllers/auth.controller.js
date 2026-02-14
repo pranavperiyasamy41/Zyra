@@ -1,7 +1,10 @@
 import User from '../models/user.model.js';
 import Otp from '../models/otp.model.js';
+import AuditLog from '../models/auditLog.model.js';
+import SystemSettings from '../models/systemSettings.model.js'; // 🆕 Import
 import sendEmail from '../utils/sendEmail.js';
 import generateToken from '../utils/generateToken.js';
+import { getIp } from '../utils/getIp.js';
 import { OAuth2Client } from 'google-auth-library';
 import dotenv from 'dotenv';
 
@@ -16,6 +19,7 @@ const getUserResponse = (user) => ({
   email: user.email,
   role: user.role,
   pharmacyName: user.pharmacyName,
+  avatar: user.avatar, // 🆕 Added to persist profile photo
   address: user.address,
   city: user.city,
   state: user.state,
@@ -40,11 +44,11 @@ const getEmailTemplate = (otp, type) => {
       
       <div style="padding: 40px 30px; text-align: center;">
         <div style="background-color: ${isReset ? '#fff1f2' : '#eff6ff'}; display: inline-block; padding: 12px 24px; border-radius: 50px; margin-bottom: 20px;">
-          <h2 style="color: ${color}; font-size: 16px; margin: 0; text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">${title}</h2>
+          <h2 style="color: ${color}; font-size: 16px; margin: 0; text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">${isReset ? 'Password Reset' : 'Account OTP'}</h2>
         </div>
         
         <p style="color: #475569; font-size: 16px; line-height: 1.6; margin-bottom: 30px; padding: 0 20px;">
-          We received a request to access your account. Use the secure code below to complete the process. This code expires in <strong>5 minutes</strong>.
+          Use the secure <strong>OTP</strong> below to complete your request. This code expires in <strong>5 minutes</strong>.
         </p>
         
         <div style="background-color: #1e293b; color: #ffffff; font-size: 36px; font-weight: 700; letter-spacing: 8px; padding: 20px 40px; border-radius: 12px; display: inline-block; margin-bottom: 30px; font-family: 'Courier New', monospace;">
@@ -63,9 +67,10 @@ const getEmailTemplate = (otp, type) => {
   `;
 };
 
-// ==========================================
-// AUTH CONTROLLERS (sendOtp, verifyOtp, register, etc.)
-// ==========================================
+// ========================================== 
+// AUTH CONTROLLERS
+// ========================================== 
+
 export const checkUserExists = async (req, res) => {
   try {
     const { email } = req.body;
@@ -97,6 +102,11 @@ export const verifyOtp = async (req, res) => {
     const { email, otp } = req.body;
     const record = await Otp.findOne({ email, otp });
     if (!record) return res.status(400).json({ message: "Invalid OTP" });
+    
+    // 🟢 Refresh Session: Reset expiry to allow time for registration
+    record.createdAt = new Date();
+    await record.save();
+
     res.status(200).json({ message: "OTP Verified", isVerified: true });
   } catch (error) { res.status(500).json({ message: "Server Error" }); }
 };
@@ -110,15 +120,24 @@ export const register = async (req, res) => {
     } = req.body;
 
     const finalUsername = username || fullName;
+    const licenseDocument = req.file ? `http://localhost:5000/${req.file.path.split('\\').join('/')}` : ""; 
 
     if (authProvider === 'google') {
        // 🟢 NEW: Verify Access Token via Google API
-       const googleUser = await fetch(`https://www.googleapis.com/oauth2/v3/userinfo`, {
+       const googleResponse = await fetch(`https://www.googleapis.com/oauth2/v3/userinfo`, {
           headers: { Authorization: `Bearer ${googleToken}` }
-       }).then(res => res.json());
+       });
+       
+       if (!googleResponse.ok) {
+           const errText = await googleResponse.text();
+           console.error("Register Google Verify Failed:", errText);
+           return res.status(400).json({ message: "Invalid Google Token." });
+       }
 
-       if (!googleUser.email) return res.status(400).json({ message: "Invalid Google Token." });
-       if (googleUser.email !== email) return res.status(400).json({ message: "Email mismatch." });
+       const googleUser = await googleResponse.json();
+
+       if (!googleUser.email) return res.status(400).json({ message: "Invalid Google Token (No Email)." });
+       if (googleUser.email !== email) return res.status(400).json({ message: "Email mismatch with Google Account." });
     } else {
        const validOtp = await Otp.findOne({ email, otp });
        if (!validOtp) return res.status(400).json({ message: "Invalid or Expired OTP." });
@@ -137,7 +156,9 @@ export const register = async (req, res) => {
     }
 
     const newUser = new User({
-      username: finalUsername, email, mobile, password: password || "", pharmacyName, drugLicense, address, city, state, pincode, pharmacyContact, authProvider, status: 'PENDING', role: 'user'
+      username: finalUsername, email, mobile, password: password || "", pharmacyName, drugLicense, 
+      address, city, state, pincode, pharmacyContact, authProvider, status: 'PENDING', role: 'user',
+      licenseDocument 
     });
 
     await newUser.save();
@@ -157,13 +178,30 @@ export const login = async (req, res) => {
 
     if (!user) return res.status(400).json({ message: "User not found" });
 
-    if (user.status !== 'APPROVED' && user.role !== 'admin' && user.role !== 'superadmin') {
+    // 🛑 MAINTENANCE MODE CHECK (Safe Version)
+    const settings = await SystemSettings.getSettings();
+    const isAdmin = user.role === 'admin' || user.role === 'superadmin';
+    
+    if (settings.maintenanceMode && !isAdmin) {
+        return res.status(503).json({ message: "🚧 System is under maintenance. Please try again later." });
+    }
+
+    if (user.status !== 'APPROVED' && !isAdmin) {
       return res.status(403).json({ message: "Account pending approval. Please contact Admin." });
+    }
+
+    if (user.isSuspended) {
+        return res.status(403).json({ message: "Account Suspended. Please contact Support." });
     }
 
     const isMatch = await user.matchPassword(password);
     
     if (isMatch) {
+        await AuditLog.create({
+            actorId: user._id, actorName: user.username,
+            action: "LOGIN", details: `User logged in via Email`,
+            ipAddress: getIp(req)
+        });
         res.json({ token: generateToken(user._id), user: getUserResponse(user) });
     } else {
         if (user.authProvider === 'google') return res.status(400).json({ message: "Invalid Password. Try logging in with Google." });
@@ -176,26 +214,65 @@ export const googleLogin = async (req, res) => {
   try {
     const { token } = req.body;
     
-    // 🟢 NEW: Verify Access Token
-    const googleUser = await fetch(`https://www.googleapis.com/oauth2/v3/userinfo`, {
-        headers: { Authorization: `Bearer ${token}` }
-    }).then(res => res.json());
+    if (!token) {
+       console.error("Google Login: No token provided");
+       return res.status(400).json({ message: "No authentication token provided" });
+    }
 
-    if (!googleUser.email) return res.status(400).json({ message: "Invalid Google Token" });
+    // 🟢 NEW: Verify Access Token
+    const googleResponse = await fetch(`https://www.googleapis.com/oauth2/v3/userinfo`, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+
+    if (!googleResponse.ok) {
+        const errorText = await googleResponse.text();
+        console.error(`Google Verification Failed (${googleResponse.status}):`, errorText);
+        return res.status(400).json({ message: "Failed to verify Google account. Please try again." });
+    }
+
+    const googleUser = await googleResponse.json();
+
+    if (!googleUser.email) {
+        console.error("Google Login: No email in response", googleUser);
+        return res.status(400).json({ message: "Google account has no email address." });
+    }
     
     const email = googleUser.email;
 
     const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ message: "User not registered. Please Sign Up first." });
+    if (!user) {
+        console.warn(`Google Login: User not found for email ${email}`);
+        return res.status(404).json({ message: "User not registered. Please Sign Up first." });
+    }
 
-    if (user.status !== 'APPROVED' && user.role !== 'admin') {
+    // 🛑 MAINTENANCE MODE CHECK (Safe Version)
+    const settings = await SystemSettings.getSettings();
+    const isAdmin = user.role === 'admin' || user.role === 'superadmin';
+
+    if (settings.maintenanceMode && !isAdmin) {
+        return res.status(503).json({ message: "🚧 System is under maintenance. Please try again later." });
+    }
+
+    if (user.status !== 'APPROVED' && !isAdmin) {
+      console.warn(`Google Login: User ${email} is pending approval`);
       return res.status(403).json({ message: "Account not active. Please wait for Admin Approval." });
     }
 
+    if (user.isSuspended) {
+      console.warn(`Google Login: User ${email} is suspended`);
+      return res.status(403).json({ message: "Account Suspended. Please contact Support." });
+    }
+
+    await AuditLog.create({
+        actorId: user._id, actorName: user.username,
+        action: "LOGIN", details: `User logged in via Google`,
+        ipAddress: getIp(req)
+    });
+
     res.json({ token: generateToken(user._id), user: getUserResponse(user) });
   } catch (error) {
-    console.error("Google Login Error:", error);
-    res.status(500).json({ message: "Google Login Failed" });
+    console.error("Google Login Critical Error:", error);
+    res.status(500).json({ message: "Login Service Error: " + error.message });
   }
 };
 
@@ -212,6 +289,12 @@ export const adminLogin = async (req, res) => {
 
     const isMatch = await user.matchPassword(password);
     if (!isMatch) return res.status(400).json({ message: "Invalid Admin Credentials" });
+
+    await AuditLog.create({
+        actorId: user._id, actorName: user.username,
+        action: "LOGIN_ADMIN", details: `Admin logged in`,
+        ipAddress: getIp(req)
+    });
 
     res.json({ token: generateToken(user._id), user: getUserResponse(user) });
   } catch (error) {

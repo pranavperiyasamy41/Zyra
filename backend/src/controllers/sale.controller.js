@@ -51,6 +51,11 @@ export const createSale = async (req, res) => {
           throw new Error(`Stock not found for: ${item.name}`);
        }
 
+       // 🔒 Security: Ensure medicine belongs to the authenticated user
+       if (medicine.user.toString() !== req.user._id.toString()) {
+          throw new Error(`Unauthorized access to medicine: ${item.name}`);
+       }
+
        const currentStock = Number(medicine.stock) || 0;
 
        if (currentStock < item.quantity) {
@@ -118,7 +123,7 @@ export const createSale = async (req, res) => {
 export const getSales = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 20;
+    const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
     const { date, month, search, startDate, endDate } = req.query;
@@ -230,4 +235,20 @@ export const getLastOrder = async (req, res) => {
     if (!sale) return res.status(404).json({ message: "No history found" });
     res.json(sale);
   } catch (error) { res.status(500).json({ message: "Server Error" }); }
+};
+
+// 5. RESET SALES DATA (Danger Zone)
+export const resetSalesData = async (req, res) => {
+  try {
+    const result = await Sale.deleteMany({ user: req.user._id });
+    
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ message: "No sales data found to delete." });
+    }
+
+    res.json({ message: `Successfully deleted ${result.deletedCount} sale records.` });
+  } catch (error) {
+    console.error("Reset Sales Error:", error);
+    res.status(500).json({ message: "Server Error during reset." });
+  }
 };

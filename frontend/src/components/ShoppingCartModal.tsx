@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { type Medicine, useAllMedicines } from '../hooks/useMedicines';
 import { useSalesHistory } from '../hooks/useSales';
 import apiClient from '../api';
@@ -66,7 +67,7 @@ const ShoppingCartModal: React.FC<ShoppingCartModalProps> = ({ isOpen, onClose, 
   };
   
   const calculateTotal = () => {
-    return cartItems.reduce((total, item) => total + (item.quantityToSell * item.mrp), 0);
+    return cartItems.reduce((total, item) => total + (item.quantityToSell * (item.mrp || 0)), 0);
   };
 
   // --- Step 1 Handler: Confirm Cart ---
@@ -134,7 +135,7 @@ const ShoppingCartModal: React.FC<ShoppingCartModalProps> = ({ isOpen, onClose, 
               <li key={item._id} className="flex items-center justify-between py-3">
                 <div>
                   <p className="font-medium text-gray-900 dark:text-white">{item.name}</p>
-                  <p className="text-sm text-gray-500 dark:text-slate-400">${item.mrp.toFixed(2)} ea. (Stock: {item.quantity})</p>
+                  <p className="text-sm text-gray-500 dark:text-slate-400">${(item.mrp || 0).toFixed(2)} ea. (Stock: {item.quantity})</p>
                 </div>
                 <div className="flex items-center space-x-2">
                   <button 
@@ -225,9 +226,9 @@ const ShoppingCartModal: React.FC<ShoppingCartModalProps> = ({ isOpen, onClose, 
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="w-full max-w-lg rounded-lg bg-white p-8 shadow-lg dark:bg-slate-800 dark:border dark:border-slate-700">
+  return createPortal(
+    <div className="fixed top-0 left-0 w-screen h-screen z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm transition-all duration-300 p-4">
+      <div className="w-full max-w-lg rounded-lg bg-white p-8 shadow-lg dark:bg-slate-800 dark:border dark:border-slate-700 animate-in fade-in zoom-in-95 duration-200">
         <div className="flex justify-between items-center">
             <h2 className="text-2xl font-bold dark:text-white">Record New Sale</h2>
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:text-slate-400 text-2xl leading-none">
@@ -242,7 +243,8 @@ const ShoppingCartModal: React.FC<ShoppingCartModalProps> = ({ isOpen, onClose, 
         
         {modalContent()}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 const otpSchema = new mongoose.Schema({
   email: { type: String, required: true },
   otp: { type: String, required: true },
-  createdAt: { type: Date, default: Date.now, expires: 300 } // ⚠️ AUTO-DELETE after 300 seconds (5 mins)
+  createdAt: { type: Date, default: Date.now, expires: 900 } // ⚠️ 15 Minutes Expiry
 });
 
 const Otp = mongoose.model('Otp', otpSchema);

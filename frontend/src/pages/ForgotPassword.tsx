@@ -46,34 +46,32 @@ const ForgotPasswordPage = () => {
   return (
     <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 relative overflow-hidden font-sans">
       {/* Background Decor */}
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0">
-         <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-purple-600 rounded-full blur-[100px] opacity-20 animate-pulse"></div>
-         <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-blue-600 rounded-full blur-[100px] opacity-20 animate-pulse" style={{ animationDelay: '2s' }}></div>
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none">
+         <div className="absolute top-[-10%] left-[-10%] w-64 md:w-96 h-64 md:h-96 bg-purple-600 rounded-full blur-[80px] md:blur-[100px] opacity-20 animate-pulse"></div>
+         <div className="absolute bottom-[-10%] right-[-10%] w-64 md:w-96 h-64 md:h-96 bg-blue-600 rounded-full blur-[80px] md:blur-[100px] opacity-20 animate-pulse" style={{ animationDelay: '2s' }}></div>
       </div>
 
-      <div className="bg-slate-800/80 backdrop-blur-xl p-8 rounded-3xl shadow-2xl w-full max-w-md border border-slate-700 relative z-10">
+      <div className="bg-slate-800/80 backdrop-blur-xl p-6 md:p-8 rounded-2xl md:rounded-3xl shadow-2xl w-full max-w-md border border-slate-700 relative z-10 animate-in fade-in zoom-in-95 duration-500">
         
         {/* Header Icon */}
-        <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl mx-auto flex items-center justify-center text-3xl shadow-lg shadow-purple-500/30 mb-4">
-                {step === 1 ? '🔐' : '✨'}
-            </div>
-            <h1 className="text-3xl font-black text-white tracking-tight">
+        <div className="text-center mb-6 md:mb-8">
+            <img src="/logo.png" alt="Zyra Logo" className="w-16 md:w-20 h-auto mx-auto mb-4 md:mb-6 object-contain drop-shadow-2xl transition-transform hover:scale-110" />
+            <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight">
                 {step === 1 ? 'Recover Account' : 'Reset Password'}
             </h1>
-            <p className="text-slate-400 text-sm mt-2">
+            <p className="text-slate-400 text-xs md:text-sm mt-2 px-2">
                 {step === 1 ? 'Enter your email to receive a secure code.' : 'Create a strong new password.'}
             </p>
         </div>
 
         {step === 1 ? (
-          <form onSubmit={handleRequestOtp} className="space-y-6">
+          <form onSubmit={handleRequestOtp} className="space-y-5 md:space-y-6">
             <div>
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">Email Address</label>
+              <label className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1.5 md:mb-2 ml-1">Email Address</label>
               <input 
                 type="email" 
                 required 
-                className="w-full p-4 bg-slate-900/50 border border-slate-600 rounded-xl text-white outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-slate-600"
+                className="w-full p-3.5 md:p-4 bg-slate-900/50 border border-slate-600 rounded-xl text-sm md:text-base text-white outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-slate-600"
                 placeholder="you@pharmacy.com"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
@@ -81,19 +79,19 @@ const ForgotPasswordPage = () => {
             </div>
             <button 
               disabled={loading}
-              className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-500/20 transition-all transform hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-black py-3.5 md:py-4 rounded-xl shadow-lg shadow-blue-500/20 transition-all transform hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-xs md:text-sm uppercase tracking-widest"
             >
-              {loading ? 'Sending Code...' : 'Send Verification Code →'}
+              {loading ? 'Sending Code...' : 'Send Verification Code'}
             </button>
           </form>
         ) : (
-          <form onSubmit={handleResetPassword} className="space-y-5">
+          <form onSubmit={handleResetPassword} className="space-y-4 md:space-y-5">
             <div>
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">Enter OTP</label>
+              <label className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1.5 md:mb-2 ml-1">Enter OTP</label>
               <input 
                 type="text" 
                 required 
-                className="w-full p-4 bg-slate-900/50 border border-slate-600 rounded-xl text-white outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 text-center tracking-[0.5em] font-mono text-xl transition-all"
+                className="w-full p-3.5 md:p-4 bg-slate-900/50 border border-slate-600 rounded-xl text-white outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 text-center tracking-[0.5em] font-mono text-lg md:text-xl transition-all"
                 placeholder="XXXXXX"
                 maxLength={6}
                 value={otp}
@@ -101,11 +99,11 @@ const ForgotPasswordPage = () => {
               />
             </div>
             <div>
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">New Password</label>
+              <label className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1.5 md:mb-2 ml-1">New Password</label>
               <input 
                 type="password" 
                 required 
-                className="w-full p-4 bg-slate-900/50 border border-slate-600 rounded-xl text-white outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all placeholder:text-slate-600"
+                className="w-full p-3.5 md:p-4 bg-slate-900/50 border border-slate-600 rounded-xl text-sm md:text-base text-white outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all placeholder:text-slate-600"
                 placeholder="Min 8 characters"
                 value={newPassword}
                 onChange={e => setNewPassword(e.target.value)}
@@ -114,15 +112,15 @@ const ForgotPasswordPage = () => {
             
             <button 
               disabled={loading}
-              className="w-full bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white font-bold py-4 rounded-xl shadow-lg shadow-purple-500/20 transition-all transform hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed mt-2"
+              className="w-full bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white font-black py-3.5 md:py-4 rounded-xl shadow-lg shadow-purple-500/20 transition-all transform hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed mt-2 text-xs md:text-sm uppercase tracking-widest"
             >
               {loading ? 'Resetting...' : '🔒 Update Password'}
             </button>
           </form>
         )}
 
-        <div className="mt-8 text-center border-t border-slate-700/50 pt-6">
-          <Link to="/login" className="text-sm text-slate-400 hover:text-white transition-colors flex items-center justify-center gap-2 group">
+        <div className="mt-6 md:mt-8 text-center border-t border-slate-700/50 pt-5 md:pt-6">
+          <Link to="/login" className="text-xs md:text-sm text-slate-400 hover:text-white transition-colors flex items-center justify-center gap-2 group">
             <span className="group-hover:-translate-x-1 transition-transform">←</span> Back to Login
           </Link>
         </div>

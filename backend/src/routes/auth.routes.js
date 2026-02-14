@@ -1,6 +1,7 @@
 import express from 'express';
+import upload from '../middleware/uploadMiddleware.js'; // 🆕 Import
 import { 
-  checkUserExists, // 👈 NEW
+  checkUserExists, 
   sendOtp, 
   verifyOtp, 
   register, 
@@ -14,12 +15,12 @@ import {
 const router = express.Router();
 
 // Email Auth Flow
-router.post('/check-user', checkUserExists); // 👈 NEW
+router.post('/check-user', checkUserExists); 
 router.post('/send-otp', sendOtp);
 router.post('/verify-otp', verifyOtp);
 
 // Main Actions
-router.post('/register', register);    
+router.post('/register', upload.single('licenseDocument'), register); // 🆕 Added Middleware
 router.post('/login', login);          
 
 // Social & Admin

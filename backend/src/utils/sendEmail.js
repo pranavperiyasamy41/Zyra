@@ -20,7 +20,7 @@ const sendEmail = async (to, subject, htmlContent) => {
     });
 
     const info = await transporter.sendMail({
-      from: `"Smart Pharmacy" <${process.env.EMAIL_USER}>`,
+      from: `"Zyra Systems" <${process.env.EMAIL_USER}>`,
       to: to,
       subject: subject,
       html: htmlContent,

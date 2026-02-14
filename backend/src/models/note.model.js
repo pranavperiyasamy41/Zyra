@@ -18,6 +18,15 @@ const NoteSchema = new mongoose.Schema({
     type: String, 
     default: 'bg-yellow-100' 
   },
+  isPinned: {
+    type: Boolean,
+    default: false
+  },
+  priority: {
+    type: String,
+    enum: ['normal', 'urgent', 'personal'],
+    default: 'normal'
+  },
   createdAt: { 
     type: Date, 
     default: Date.now 

@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import Cropper from 'react-easy-crop';
 import getCroppedImg from '../utils/cropImage';
 import { X, Check } from 'lucide-react';
@@ -29,8 +30,8 @@ const ImageCropModal: React.FC<ImageCropModalProps> = ({ imageSrc, onCancel, onS
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+  return createPortal(
+    <div className="fixed top-0 left-0 w-screen h-screen z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl overflow-hidden shadow-2xl flex flex-col h-[500px]">
         
         {/* Header */}
@@ -92,7 +93,8 @@ const ImageCropModal: React.FC<ImageCropModalProps> = ({ imageSrc, onCancel, onS
             </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

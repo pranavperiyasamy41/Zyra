@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import apiClient from '../api';
 import { useGoogleLogin } from '@react-oauth/google';
-import { ArrowLeft, Mail, Lock, ArrowRight, User } from 'lucide-react';
+import { ArrowLeft, Mail, Lock, ArrowRight, Eye, EyeOff } from 'lucide-react';
 
 const GoogleIcon = () => (
   <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -29,6 +29,7 @@ const GoogleIcon = () => (
 const Login: React.FC = () => {
   const [emailOrUsername, setEmailOrUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPwd, setShowPwd] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
@@ -57,7 +58,10 @@ const Login: React.FC = () => {
       }
     } catch (err: any) {
       console.error("Login Error:", err);
-      const msg = err.response?.data?.message || 'Login failed.';
+      let msg = err.response?.data?.message || 'Login failed.';
+      if (msg === 'Invalid credentials') {
+          msg = "Incorrect password or username. Please try again.";
+      }
       setError(msg);
     } finally {
       setLoading(false);
@@ -80,6 +84,7 @@ const Login: React.FC = () => {
         login(res.data.token, res.data.user);
         navigate('/dashboard');
       } catch (err: any) {
+        console.error("Google Login API Error:", err);
         const msg = err.response?.data?.message || "Google Login Failed";
         setError(msg);
       }
@@ -88,68 +93,57 @@ const Login: React.FC = () => {
   });
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-500 font-sans flex items-center justify-center p-4 relative">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-500 font-sans flex items-center justify-center p-4 relative overflow-hidden">
       
+      {/* Heavy Animated Background Blobs */}
+      <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-brand-primary/10 rounded-full blur-[100px] animate-blob mix-blend-multiply dark:mix-blend-screen dark:opacity-20 pointer-events-none"></div>
+      <div className="absolute top-[20%] right-[-10%] w-[400px] h-[400px] bg-brand-dark/10 rounded-full blur-[100px] animate-blob animation-delay-2000 mix-blend-multiply dark:mix-blend-screen dark:opacity-20 pointer-events-none"></div>
+      <div className="absolute bottom-[-10%] left-[20%] w-[600px] h-[600px] bg-brand-highlight/20 rounded-full blur-[100px] animate-blob animation-delay-4000 mix-blend-multiply dark:mix-blend-screen dark:opacity-20 pointer-events-none"></div>
+
       {/* Subtle Background Pattern */}
       <div className="absolute inset-0 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] dark:bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:24px_24px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,#000_70%,transparent_100%)] pointer-events-none"></div>
 
-      <div className="w-full max-w-[500px] relative z-10">
+      <div className="w-full max-w-[500px] relative z-10 animate-in fade-in slide-in-from-bottom-8 duration-1000 ease-out-expo px-2 sm:px-0">
         
         {/* Back navigation */}
-        <div className="mb-8 flex justify-between items-center px-2">
-            <Link to="/" className="group flex items-center gap-2 text-sm font-bold text-slate-400 hover:text-blue-600 transition-all">
+        <div className="mb-4 sm:mb-6 flex justify-between items-center px-2 animate-in fade-in slide-in-from-left-4 duration-1000 delay-300 fill-mode-both">
+            <Link to="/" className="group flex items-center gap-2 text-sm font-bold text-slate-400 hover:text-brand-primary transition-all">
                 <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
                 <span>Return to Home</span>
             </Link>
         </div>
 
         {/* --- MAIN LOGIN CONTAINER --- */}
-        <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-slate-800 p-10 transition-all duration-300">
+        <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl rounded-[2rem] sm:rounded-[2.5rem] shadow-2xl border border-white/60 dark:border-slate-700 p-6 sm:p-8 lg:p-10 transition-all duration-500 hover:shadow-brand-primary/10 hover:border-brand-primary/20">
             
             {/* BRANDING & HEADER */}
-            <div className="text-center mb-10">
-                <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-600 text-white font-black text-2xl mb-6 shadow-xl shadow-blue-500/30">
-                    Z
-                </div>
-                <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-none mb-3">
+            <div className="text-center mb-6 sm:mb-8 animate-in fade-in zoom-in-95 duration-1000 delay-150 fill-mode-both">
+                <img src="/logo.png" alt="Zyra Logo" className="w-16 sm:w-20 h-auto mx-auto mb-3 sm:mb-4 object-contain drop-shadow-lg transform transition-transform hover:scale-110 hover:rotate-3" />
+                <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-none mb-2">
                     Welcome Back
                 </h2>
-                <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">
-                    Sign in to your Zyra account.
+                <p className="text-slate-500 dark:text-slate-400 text-[10px] sm:text-xs font-medium uppercase tracking-widest">
+                    Secure Dashboard Access
                 </p>
             </div>
 
             {/* ERROR DISPLAY */}
             {error && (
-                <div className="bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 text-red-600 dark:text-red-400 p-4 rounded-2xl text-sm font-bold text-center mb-8 animate-in fade-in zoom-in duration-300">
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 text-red-600 dark:text-red-400 p-3 rounded-xl text-xs font-bold text-center mb-6 animate-in fade-in zoom-in-95 duration-300">
                     {error}
                 </div>
             )}
 
-            {/* CUSTOM GOOGLE BUTTON */}
-            <button 
-                onClick={() => googleLogin()}
-                className="w-full h-14 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-700 dark:text-white font-bold text-sm transition-all duration-300 hover:border-blue-500 hover:shadow-lg hover:shadow-blue-500/10 hover:-translate-y-1 active:scale-[0.98] flex items-center justify-center gap-3 group mb-8"
-            >
-                <GoogleIcon />
-                <span>Sign in with Google</span>
-            </button>
-
-            <div className="relative flex py-2 items-center mb-8">
-                <div className="flex-grow border-t border-slate-100 dark:border-slate-800"></div>
-                <span className="flex-shrink mx-4 text-slate-400 text-[10px] font-black uppercase tracking-widest">Or Login with Email</span>
-                <div className="flex-grow border-t border-slate-100 dark:border-slate-800"></div>
-            </div>
-
-            <form onSubmit={handleLogin} className="space-y-6">
-                <div className="space-y-2">
-                    <label className="text-sm font-bold text-slate-900 dark:text-white ml-1">Email or Username</label>
+            {/* FORM */}
+            <form onSubmit={handleLogin} className="space-y-4 sm:space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-300 fill-mode-both">
+                <div className="space-y-1.5">
+                    <label className="text-[10px] sm:text-xs font-bold text-brand-primary dark:text-brand-highlight ml-1">Username</label>
                     <div className="relative group">
-                        <Mail className="absolute left-4 top-4 w-5 h-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                        <Mail className="absolute left-4 top-3 md:top-3.5 w-4 h-4 md:w-5 md:h-5 text-slate-400 group-focus-within:text-brand-primary transition-colors" />
                         <input
                             type="text"
-                            className="w-full pl-12 pr-5 py-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 dark:text-white shadow-sm transition-all placeholder:text-slate-400"
-                            placeholder="user@example.com"
+                            className="w-full pl-11 md:pl-12 pr-5 py-3 md:py-3.5 bg-slate-50/50 dark:bg-slate-800/30 border border-slate-200 dark:border-slate-700 rounded-xl md:rounded-2xl text-sm outline-none focus:ring-4 focus:ring-brand-primary/10 focus:border-brand-primary dark:text-white shadow-sm transition-all placeholder:text-slate-400/70 hover:bg-white dark:hover:bg-slate-800/50 hover:border-brand-primary/30"
+                            placeholder="Email or Username"
                             value={emailOrUsername}
                             onChange={(e) => setEmailOrUsername(e.target.value)}
                             required
@@ -157,37 +151,61 @@ const Login: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                     <div className="flex justify-between items-center ml-1">
-                        <label className="text-sm font-bold text-slate-900 dark:text-white">Password</label>
-                        <Link to="/forgot-password" className="text-xs font-bold text-blue-500 hover:text-blue-600 transition-colors">
+                        <label className="text-[10px] sm:text-xs font-bold text-brand-primary dark:text-brand-highlight">Password</label>
+                        <Link to="/forgot-password" title="Recover Access" className="text-[9px] sm:text-[10px] font-bold text-brand-primary dark:text-brand-highlight hover:opacity-70 transition-all">
                             Forgot Password?
                         </Link>
                     </div>
                     <div className="relative group">
-                        <Lock className="absolute left-4 top-4 w-5 h-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                        <Lock className="absolute left-4 top-3 md:top-3.5 w-4 h-4 md:w-5 md:h-5 text-slate-400 group-focus-within:text-brand-primary transition-colors" />
                         <input
-                            type="password"
-                            className="w-full pl-12 pr-5 py-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 dark:text-white shadow-sm transition-all placeholder:text-slate-400"
-                            placeholder="Enter your password"
+                            type={showPwd ? "text" : "password"}
+                            className="w-full pl-11 md:pl-12 pr-11 md:pr-12 py-3 md:py-3.5 bg-slate-50/50 dark:bg-slate-800/30 border border-slate-200 dark:border-slate-700 rounded-xl md:rounded-2xl text-sm outline-none focus:ring-4 focus:ring-brand-primary/10 focus:border-brand-primary dark:text-white shadow-sm transition-all placeholder:text-slate-400/70 hover:bg-white dark:hover:bg-slate-800/50 hover:border-brand-primary/30"
+                            placeholder="Enter Password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             required
                         />
+                        <button 
+                            type="button"
+                            onClick={() => setShowPwd(!showPwd)}
+                            className="absolute right-4 top-3 md:top-3.5 text-slate-400 hover:text-brand-primary transition-all"
+                        >
+                            {showPwd ? <EyeOff className="w-4 h-4 md:w-5 md:h-5" /> : <Eye className="w-4 h-4 md:w-5 md:h-5" />}
+                        </button>
                     </div>
                 </div>
 
                 <button
                     type="submit"
                     disabled={loading}
-                    className="w-full h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl shadow-blue-600/20 transition-all transform hover:-translate-y-1 active:scale-[0.98] flex items-center justify-center gap-2 mt-2"
+                    className="group relative overflow-hidden w-full h-12 md:h-14 bg-gradient-to-r from-brand-btn-start to-brand-btn-end text-white rounded-xl md:rounded-2xl font-black text-xs md:text-sm uppercase tracking-widest shadow-xl shadow-brand-btn-start/30 transition-all transform hover:-translate-y-1 active:scale-[0.98] flex items-center justify-center gap-2 mt-2"
                 >
-                    {loading ? 'Authenticating...' : 'Sign In'} <ArrowRight className="w-4 h-4" />
+                    <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-shimmer"></div>
+                    <span className="relative flex items-center gap-2">
+                        {loading ? 'Verifying...' : 'Sign In'} <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                    </span>
                 </button>
             </form>
 
-            <p className="text-center text-slate-400 text-xs mt-8 font-medium">
-                New to Zyra? <Link to="/register" className="text-blue-600 font-bold hover:text-blue-700 transition-colors hover:underline underline-offset-4 ml-1">Create an account</Link>
+            <div className="relative flex py-5 sm:py-6 items-center animate-in fade-in duration-1000 delay-500 fill-mode-both">
+                <div className="flex-grow border-t border-slate-100 dark:border-slate-800"></div>
+                <span className="flex-shrink mx-4 text-slate-400 text-[9px] sm:text-[10px] font-black uppercase tracking-widest">Or Access with</span>
+                <div className="flex-grow border-t border-slate-100 dark:border-slate-800"></div>
+            </div>
+
+            <button 
+                onClick={() => googleLogin()}
+                className="w-full h-11 md:h-12 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl md:rounded-2xl text-slate-700 dark:text-white font-bold text-xs transition-all duration-300 hover:border-brand-primary hover:shadow-lg hover:shadow-brand-primary/10 active:scale-[0.98] flex items-center justify-center gap-3 mb-4 sm:mb-6 animate-in fade-in slide-in-from-bottom-2 duration-1000 delay-600 fill-mode-both"
+            >
+                <GoogleIcon />
+                <span>Google Account</span>
+            </button>
+
+            <p className="text-center text-slate-400 text-[10px] sm:text-xs font-medium animate-in fade-in duration-1000 delay-700 fill-mode-both">
+                New to Zyra? <Link to="/register" className="text-brand-primary dark:text-brand-highlight font-bold hover:opacity-70 transition-colors ml-1">Create Account</Link>
             </p>
 
         </div>

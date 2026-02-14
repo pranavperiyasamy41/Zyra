@@ -8,6 +8,7 @@ interface User {
   email: string;
   pharmacyName: string;
   role: string;
+  avatar?: string; // 🆕 Added Avatar
   // New Fields for PDF Invoice
   address?: string;
   city?: string;
@@ -32,20 +33,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is already logged in (Persistent Session)
-    const storedUser = localStorage.getItem('user');
-    const token = localStorage.getItem('token');
+    const initAuth = async () => {
+      const storedUser = localStorage.getItem('user');
+      const token = localStorage.getItem('token');
 
-    if (storedUser && token) {
-      setUser(JSON.parse(storedUser));
-      apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    }
-    setLoading(false);
+      if (token) {
+        apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        
+        // 🆕 Fetch fresh profile to ensure avatar & details are up-to-date
+        try {
+          const { data } = await apiClient.get('/users/profile');
+          setUser(data);
+          localStorage.setItem('user', JSON.stringify(data)); // Sync fresh data
+        } catch (error) {
+          console.error("Failed to fetch user profile", error);
+          // Fallback to stored user if fetch fails (e.g. offline)
+          if (storedUser) setUser(JSON.parse(storedUser));
+        }
+      }
+      setLoading(false);
+    };
+
+    initAuth();
   }, []);
 
   const login = (token: string, userData: User) => {
     localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(userData));
+    // Try-catch for localStorage quota limits (Base64 avatars can be large)
+    try {
+        localStorage.setItem('user', JSON.stringify(userData));
+    } catch (e) {
+        console.warn("Failed to save user to localStorage (likely quota exceeded).");
+    }
     apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     setUser(userData);
   };

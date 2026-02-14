@@ -22,6 +22,9 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AdminUsersPage from "./pages/AdminUsersPage";
 import AdminAuditLogs from "./pages/AdminAuditLogs";
 import AdminSupportPage from "./pages/AdminSupportPage";
+import AdminSettingsPage from "./pages/AdminSettingsPage"; 
+import AdminAnnouncements from "./pages/AdminAnnouncements";
+import AdminLicensePage from "./pages/AdminLicensePage"; // 🆕 IMPORT
 
 const router = createBrowserRouter([
   // --- PUBLIC ROUTES ---
@@ -47,7 +50,7 @@ const router = createBrowserRouter([
       // Standard User Routes
       { path: "dashboard", element: <Dashboard /> },
       { path: "inventory", element: <InventoryPage /> },
-      { path: "suppliers", element: <SuppliersPage /> }, // 🆕 NEW
+      { path: "suppliers", element: <SuppliersPage /> }, 
       { path: "sales", element: <SalesPage /> },
       { path: "notes", element: <NotesPage /> },
       { path: "settings", element: <SettingsPage /> },
@@ -56,8 +59,11 @@ const router = createBrowserRouter([
       // ADMIN ROUTES
       { path: "admin-dashboard", element: <AdminDashboard /> },
       { path: "admin-users", element: <AdminUsersPage /> },
+      { path: "admin-licenses", element: <AdminLicensePage /> }, // 🆕 ROUTE
       { path: "admin-logs", element: <AdminAuditLogs /> },
       { path: "admin-support", element: <AdminSupportPage /> },
+      { path: "admin-settings", element: <AdminSettingsPage /> },
+      { path: "admin-announcements", element: <AdminAnnouncements /> }, 
     ],
   },
 ]);

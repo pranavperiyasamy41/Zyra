@@ -40,13 +40,39 @@ export const addMedicine = async (req, res) => {
 };
 
 // ==============================
-// 2. GET ALL MEDICINES
+// 2. GET ALL MEDICINES (With Pagination & Search)
 // ==============================
 export const getMedicines = async (req, res) => {
   try {
-    // Sort by Expiry Date (FIFO)
-    const medicines = await Medicine.find({ user: req.user._id }).sort({ expiryDate: 1 });
-    res.json(medicines);
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const skip = (page - 1) * limit;
+    const search = req.query.search || '';
+
+    let query = { user: req.user._id };
+
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { batchId: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    const totalDocs = await Medicine.countDocuments(query);
+    const medicines = await Medicine.find(query)
+      .sort({ expiryDate: 1 }) // Expiry First (FIFO)
+      .skip(skip)
+      .limit(limit);
+
+    res.json({
+      data: medicines,
+      pagination: {
+        total: totalDocs,
+        page,
+        limit,
+        totalPages: Math.ceil(totalDocs / limit)
+      }
+    });
   } catch (error) {
     res.status(500).json({ message: "Server Error" });
   }
@@ -66,7 +92,10 @@ export const updateMedicine = async (req, res) => {
       return res.status(401).json({ message: "Not authorized" });
     }
 
-    const updatedMedicine = await Medicine.findByIdAndUpdate(id, req.body, { new: true });
+    // 🔒 Security: Prevent transferring ownership
+    const { user, ...updateData } = req.body; 
+
+    const updatedMedicine = await Medicine.findByIdAndUpdate(id, updateData, { new: true });
     res.json(updatedMedicine);
   } catch (error) {
     res.status(500).json({ message: "Server Error" });

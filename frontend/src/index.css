@@ -2,6 +2,23 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 🟢 HIDE BROWSER DEFAULT PASSWORD ICONS */
+input::-ms-reveal,
+input::-ms-clear {
+  display: none;
+}
+
+input::-webkit-contacts-auto-fill-button,
+input::-webkit-credentials-auto-fill-button {
+  visibility: hidden;
+  display: none !important;
+  pointer-events: none;
+  position: absolute;
+  right: 0;
+}
+
+@layer base {
+
 /* Custom Scrollbar for Notes */
 .custom-scrollbar::-webkit-scrollbar {
   width: 4px;
@@ -24,4 +41,5 @@
 }
 .animate-fadeIn {
     animation: fadeIn 0.3s ease-out forwards;
+}
 }

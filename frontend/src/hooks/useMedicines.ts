@@ -1,12 +1,19 @@
 import useSWR from 'swr';
 import apiClient from '../api';
 // --- Add this new hook ---
-export const useAllMedicines = () => {
+export const useAllMedicines = (page = 1, search = '') => {
+  const query = new URLSearchParams({
+    page: page.toString(),
+    limit: '20',
+    search
+  });
+  
   // We use '/medicines' as the SWR key, which maps to our API endpoint
-  const { data, error, isLoading, mutate } = useSWR('/medicines', fetcher);
+  const { data, error, isLoading, mutate } = useSWR(`/medicines?${query.toString()}`, fetcher);
 
   return {
-    medicines: data,
+    medicines: data?.data || [],
+    pagination: data?.pagination,
     isLoading,
     isError: error,
     mutate, // We'll use 'mutate' to refresh the list after we add/delete

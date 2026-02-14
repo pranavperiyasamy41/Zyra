@@ -15,6 +15,8 @@ const userSchema = mongoose.Schema({
     unique: true, 
     sparse: true // ✅ CRITICAL FIX: Allows multiple users (like Admins) to have NO license
   },
+  isLicenseVerified: { type: Boolean, default: false }, // 🆕 Verified Status
+  licenseDocument: { type: String, default: "" }, // 🆕 Proof (Image URL)
   address: { type: String },
   city: { type: String },
   state: { type: String },
@@ -22,17 +24,9 @@ const userSchema = mongoose.Schema({
   pharmacyContact: { type: String },
 
   // Role & Status
-  role: { 
-    type: String, 
-    enum: ['user', 'admin', 'superadmin'], 
-    default: 'user' 
-  },
-  status: { 
-    type: String, 
-    enum: ['PENDING', 'APPROVED', 'REJECTED'], 
-    default: 'PENDING' 
-  },
-  authProvider: { type: String, default: 'email' },
+      status: { type: String, enum: ['PENDING', 'APPROVED', 'REJECTED'], default: 'PENDING' },
+      isSuspended: { type: Boolean, default: false },
+      role: { type: String, enum: ['user', 'admin', 'superadmin'], default: 'user' },  authProvider: { type: String, default: 'email' },
 }, { timestamps: true });
 
 // Password Encryption

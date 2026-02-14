@@ -59,9 +59,12 @@ export const updateSupplier = async (req, res) => {
       return res.status(400).json({ message: "Please provide a valid email address." });
     }
 
+    // 🔒 Prevent transferring ownership
+    const { user, ...updateData } = req.body;
+
     const supplier = await Supplier.findOneAndUpdate(
       { _id: req.params.id, user: req.user._id },
-      req.body,
+      updateData,
       { new: true }
     );
     if (!supplier) return res.status(404).json({ message: "Supplier not found" });

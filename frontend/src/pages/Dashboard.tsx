@@ -5,7 +5,6 @@ import apiClient from '../api';
 import { useAuth } from '../context/AuthContext';
 import SalesChart from '../components/SalesChart';
 import RecordSaleModal from '../components/RecordSaleModal';
-// 🆕 Premium Icons
 import { 
   IndianRupee, 
   TrendingUp, 
@@ -19,7 +18,8 @@ import {
   ArrowRight,
   History,
   BarChart3,
-  Flame
+  Flame,
+  ChevronDown
 } from 'lucide-react';
 
 // --- Types ---
@@ -58,7 +58,6 @@ interface DashboardStats {
 
 const fetcher = (url: string) => apiClient.get(url).then(res => res.data);
 
-// 💰 Currency Formatter Helper
 const formatRupee = (amount: number) => {
   return new Intl.NumberFormat('en-IN', {
     style: 'currency',
@@ -72,17 +71,16 @@ const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
   const [isSaleModalOpen, setIsSaleModalOpen] = useState(false);
   const [chartDays, setChartDays] = useState<number>(7);
+  const [isChartDropdownOpen, setIsChartDropdownOpen] = useState(false);
 
-  // --- Fetch Data ---
   const { data: serverStats, mutate: mutateStats } = useSWR<DashboardStats>('/dashboard/stats', fetcher);
-  const { data: inventory = [], mutate: mutateInventory } = useSWR<Medicine[]>('/medicines', fetcher);
+  const { data: inventoryData, mutate: mutateInventory } = useSWR('/medicines?limit=50', fetcher);
   const { data: salesData, mutate: mutateSales } = useSWR('/sales', fetcher);
   const { data: announcements = [] } = useSWR<Announcement[]>('/announcements', fetcher);
 
-  // Extract sales array from paginated response
+  const inventory = useMemo(() => inventoryData?.data || [], [inventoryData]);
   const sales = useMemo(() => salesData?.data || [], [salesData]);
 
-  // --- Stats Logic ---
   const lists = useMemo(() => {
     const safeInventory = Array.isArray(inventory) ? inventory : [];
     const safeSales = Array.isArray(sales) ? sales : [];
@@ -124,118 +122,121 @@ const DashboardPage: React.FC = () => {
   return (
     <div className="relative min-h-screen bg-transparent transition-colors duration-300">
       
-      {/* HEADER */}
-      <header className="sticky top-0 z-30 backdrop-blur-2xl bg-white/60 dark:bg-slate-900/60 border-b border-white/20 dark:border-slate-800 p-6 lg:p-8 flex flex-col md:flex-row justify-between md:items-end gap-4 shadow-sm transition-all">
-        <div>
-          <h1 className="text-4xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">
-            {user?.pharmacyName || 'My Pharmacy'}
+      {/* ==================== 📌 I MEDICALS SECTION (FIXED POSITION) ==================== */}
+      <header className="fixed top-20 left-0 right-0 z-30 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 md:p-6 lg:px-8 lg:py-6 flex flex-col md:flex-row justify-between items-center gap-4 shadow-md transition-all">
+        <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-6 text-center md:text-left">
+          <h1 className="text-2xl md:text-3xl lg:text-4xl font-black text-slate-900 dark:text-white uppercase tracking-tighter leading-none">
+            {user?.pharmacyName || 'I MEDICALS'}
           </h1>
-          <div className="flex items-center gap-2 mt-1">
-             <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-             <p className="text-slate-500 font-bold text-sm tracking-wide">OPERATOR: <span className="text-blue-600 dark:text-blue-400">{user?.username}</span></p>
+          <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 hidden md:block"></div>
+          <div className="flex items-center justify-center md:justify-start gap-2">
+             <div className="w-2 h-2 rounded-full bg-brand-primary dark:bg-brand-highlight animate-pulse"></div>
+             <p className="text-slate-500 dark:text-slate-400 font-bold text-[10px] sm:text-xs uppercase tracking-widest">
+                OPERATOR: <span className="text-brand-primary dark:text-brand-highlight">{user?.username}</span>
+             </p>
           </div>
         </div>
         
         <button 
           onClick={() => setIsSaleModalOpen(true)}
-          className="group relative overflow-hidden bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 rounded-2xl font-black shadow-xl shadow-blue-600/20 transition-all active:scale-95"
+          className="group relative overflow-hidden bg-gradient-to-r from-brand-btn-start to-brand-btn-end hover:shadow-brand-btn-end/40 text-white w-full md:w-auto px-8 py-3 md:py-3.5 rounded-xl md:rounded-2xl font-black shadow-xl shadow-brand-btn-start/30 transition-all active:scale-95 flex items-center justify-center gap-2 text-xs md:text-sm uppercase tracking-wider"
         >
           <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
-          <span className="flex items-center gap-2">
-            <Plus className="w-6 h-6" /> NEW SALE
-          </span>
+          <Plus className="w-4 h-4 md:w-5 md:h-5 relative z-10 text-white" /> 
+          <span className="relative z-10 text-white">New Sale</span>
         </button>
       </header>
+
+      {/* Spacer to prevent content overlap with fixed header */}
+      <div className="h-[180px] sm:h-[160px] md:h-[100px] w-full"></div>
       
-      <div className="p-6 lg:p-8 pt-6 space-y-8">
+      {/* ==================== DASHBOARD CONTENT AREA ==================== */}
+      <div className="p-4 md:p-6 lg:px-10 py-6 md:py-10 space-y-6 md:space-y-10 max-w-7xl mx-auto animate-fade-in-up">
         
         {/* NOTICES */}
         {lists.notices.length > 0 && (
-          <div className="animate-in fade-in slide-in-from-top-4 duration-500 mb-6">
+          <div className="animate-in fade-in slide-in-from-top-4 duration-500">
              {lists.notices.map(ann => (
-              <div key={ann._id} className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 flex items-start gap-3">
-                <Megaphone className="w-5 h-5 mt-0.5" />
+              <div key={ann._id} className="p-4 rounded-2xl bg-brand-primary/10 border border-brand-primary/20 text-brand-primary dark:text-brand-highlight flex items-start gap-3 shadow-sm">
+                <Megaphone className="w-4 h-4 sm:w-5 sm:h-5 mt-0.5 flex-shrink-0" />
                 <div>
-                   <p className="font-bold text-sm uppercase tracking-wide">{ann.title}</p>
-                   <p className="text-sm opacity-90">{ann.content}</p>
+                   <p className="font-black text-[10px] sm:text-xs uppercase tracking-widest mb-1">{ann.title}</p>
+                   <p className="text-xs sm:text-sm font-medium opacity-90 line-clamp-2 md:line-clamp-none">{ann.content}</p>
                 </div>
               </div>
             ))}
           </div>
         )}
 
-        {/* FINANCIAL TRIAD (With Icons & Rupee) */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="relative group p-6 rounded-[2rem] bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 dark:border-slate-800 hover:border-emerald-500/50 transition-all duration-300 shadow-2xl dark:shadow-none overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl -mr-10 -mt-10 group-hover:bg-emerald-500/20 transition-all"></div>
+        {/* FINANCIAL TRIAD - Responsive Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8">
+            <div className="relative group p-6 md:p-8 rounded-2xl md:rounded-[2.5rem] bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 hover:border-brand-primary/50 transition-all duration-500 shadow-xl hover:shadow-2xl overflow-hidden">
+                <div className="absolute top-0 right-0 w-24 h-24 md:w-32 md:h-32 bg-brand-primary/5 rounded-full blur-3xl -mr-10 -mt-10 group-hover:bg-brand-primary/10 transition-all"></div>
                 <div className="relative z-10">
-                    <div className="flex justify-between items-start mb-4">
-                        <div className="p-3 bg-emerald-500/10 rounded-2xl text-emerald-500">
-                            <Activity className="w-6 h-6" />
+                    <div className="flex justify-between items-start mb-4 md:mb-6">
+                        <div className="p-3 md:p-4 bg-brand-primary/10 dark:bg-brand-primary/30 rounded-xl md:rounded-2xl text-brand-primary dark:text-brand-highlight shadow-sm dark:shadow-brand-primary/20">
+                            <Activity className="w-5 h-5 md:w-6 md:h-6" />
                         </div>
-                        <span className="text-xs font-black text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded-lg uppercase tracking-wider">Today</span>
+                        <span className="text-[9px] md:text-[10px] font-black text-brand-primary dark:text-brand-highlight bg-brand-primary/5 dark:bg-brand-primary/20 px-2.5 py-1 md:px-3 md:py-1.5 rounded-full uppercase tracking-widest border border-brand-primary/10 dark:border-brand-primary/30">Today</span>
                     </div>
-                    <h3 className="text-4xl font-black text-slate-900 dark:text-white mb-1">{formatRupee(stats.revenueToday)}</h3>
-                    <p className="text-slate-400 text-xs font-medium">Daily Performance</p>
+                    <h3 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white mb-1 md:mb-2">{formatRupee(stats.revenueToday)}</h3>
+                    <p className="text-slate-400 text-[10px] md:text-xs font-bold uppercase tracking-wide">Daily Revenue</p>
                 </div>
             </div>
 
-            <div className="relative group p-6 rounded-[2rem] bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 dark:border-slate-800 hover:border-blue-500/50 transition-all duration-300 shadow-2xl dark:shadow-none overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl -mr-10 -mt-10 group-hover:bg-blue-500/20 transition-all"></div>
+            <div className="relative group p-6 md:p-8 rounded-2xl md:rounded-[2.5rem] bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 hover:border-brand-primary/50 transition-all duration-500 shadow-xl hover:shadow-2xl overflow-hidden">
+                <div className="absolute top-0 right-0 w-24 h-24 md:w-32 md:h-32 bg-brand-primary/5 rounded-full blur-3xl -mr-10 -mt-10 group-hover:bg-brand-primary/10 transition-all"></div>
                 <div className="relative z-10">
-                    <div className="flex justify-between items-start mb-4">
-                        <div className="p-3 bg-blue-500/10 rounded-2xl text-blue-500">
-                            <Calendar className="w-6 h-6" />
+                    <div className="flex justify-between items-start mb-4 md:mb-6">
+                        <div className="p-3 md:p-4 bg-brand-primary/10 dark:bg-brand-primary/30 rounded-xl md:rounded-2xl text-brand-primary dark:text-brand-highlight shadow-sm dark:shadow-brand-primary/20">
+                            <Calendar className="w-5 h-5 md:w-6 md:h-6" />
                         </div>
-                        <span className="text-xs font-black text-blue-500 bg-blue-500/10 px-2 py-1 rounded-lg uppercase tracking-wider">Month</span>
+                        <span className="text-[9px] md:text-[10px] font-black text-brand-primary dark:text-brand-highlight bg-brand-primary/5 dark:bg-brand-primary/20 px-2.5 py-1 md:px-3 md:py-1.5 rounded-full uppercase tracking-widest border border-brand-primary/10 dark:border-brand-primary/30">Month</span>
                     </div>
-                    <h3 className="text-4xl font-black text-slate-900 dark:text-white mb-1">{formatRupee(stats.revenueMonth)}</h3>
-                    <p className="text-slate-400 text-xs font-medium">Monthly Target</p>
+                    <h3 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white mb-1 md:mb-2">{formatRupee(stats.revenueMonth)}</h3>
+                    <p className="text-slate-400 text-[10px] md:text-xs font-bold uppercase tracking-wide">Monthly Performance</p>
                 </div>
             </div>
 
-            <div className="relative group p-6 rounded-[2rem] bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 dark:border-slate-800 hover:border-purple-500/50 transition-all duration-300 shadow-2xl dark:shadow-none overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl -mr-10 -mt-10 group-hover:bg-purple-500/20 transition-all"></div>
+            <div className="relative group p-6 md:p-8 rounded-2xl md:rounded-[2.5rem] bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 hover:border-brand-primary/50 transition-all duration-500 shadow-xl hover:shadow-2xl overflow-hidden sm:col-span-2 lg:col-span-1">
+                <div className="absolute top-0 right-0 w-24 h-24 md:w-32 md:h-32 bg-brand-primary/5 rounded-full blur-3xl -mr-10 -mt-10 group-hover:bg-brand-primary/10 transition-all"></div>
                 <div className="relative z-10">
-                    <div className="flex justify-between items-start mb-4">
-                        <div className="p-3 bg-purple-500/10 rounded-2xl text-purple-500">
-                            <IndianRupee className="w-6 h-6" />
+                    <div className="flex justify-between items-start mb-4 md:mb-6">
+                        <div className="p-3 md:p-4 bg-brand-primary/10 dark:bg-brand-primary/30 rounded-xl md:rounded-2xl text-brand-primary dark:text-brand-highlight shadow-sm dark:shadow-brand-primary/20">
+                            <IndianRupee className="w-5 h-5 md:w-6 md:h-6" />
                         </div>
-                        <span className="text-xs font-black text-purple-500 bg-purple-500/10 px-2 py-1 rounded-lg uppercase tracking-wider">Lifetime</span>
+                        <span className="text-[9px] md:text-[10px] font-black text-brand-primary dark:text-brand-highlight bg-brand-primary/5 dark:bg-brand-primary/20 px-2.5 py-1 md:px-3 md:py-1.5 rounded-full uppercase tracking-widest border border-brand-primary/10 dark:border-brand-primary/30">Lifetime</span>
                     </div>
-                    <h3 className="text-4xl font-black text-slate-900 dark:text-white mb-1">{formatRupee(stats.revenue)}</h3>
-                    <p className="text-slate-400 text-xs font-medium">Total Business Value</p>
+                    <h3 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white mb-1 md:mb-2">{formatRupee(stats.revenue)}</h3>
+                    <p className="text-slate-400 text-[10px] md:text-xs font-bold uppercase tracking-wide">Total Sales Volume</p>
                 </div>
             </div>
         </div>
 
-        {/* ALERTS ROW */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
+        {/* ALERTS ROW - Responsive Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8 items-stretch">
             
             {/* LOW STOCK CARD */}
             <div className="h-full">
                <div 
                  onClick={() => navigate('/inventory?filter=low-stock')}
-                 className="relative h-full overflow-hidden rounded-[2rem] p-6 cursor-pointer group border border-pink-500/30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-2xl hover:scale-[1.02] transition-all flex flex-col justify-between"
+                 className="relative h-full overflow-hidden rounded-2xl md:rounded-[2.5rem] p-6 md:p-8 cursor-pointer group border border-red-500/20 bg-white dark:bg-slate-900 shadow-xl hover:shadow-red-500/10 hover:scale-[1.02] transition-all flex flex-col justify-between"
                >
                   <div className="flex justify-between items-start">
                       <div>
-                        <p className="text-xs font-black text-pink-500 uppercase tracking-widest mb-1">Low Stock</p>
+                        <p className="text-[10px] md:text-xs font-black text-red-500 dark:text-red-400 uppercase tracking-widest mb-1 md:mb-2">Inventory Alert</p>
                         <div className="flex items-baseline gap-2">
-                            <span className="text-4xl font-black text-slate-900 dark:text-white">{stats.lowStock}</span>
-                            <span className="text-sm text-slate-400 font-bold uppercase">Items</span>
+                            <span className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white">{stats.lowStock}</span>
+                            <span className="text-[10px] md:text-xs text-slate-400 font-black uppercase">Low Items</span>
                         </div>
                       </div>
-                      <div className="bg-pink-500/20 p-2 rounded-xl text-pink-500 animate-pulse">
-                        <AlertTriangle className="w-6 h-6" />
+                      <div className="bg-red-500/10 dark:bg-red-500/30 p-2.5 md:p-3 rounded-xl md:rounded-2xl text-red-500 dark:text-red-400 animate-pulse shadow-sm dark:shadow-red-500/20">
+                        <AlertTriangle className="w-6 h-6 md:w-7 md:h-7" />
                       </div>
                   </div>
-                  
-                  <div className="mt-6 pt-4 border-t border-pink-500/20 flex justify-between items-end">
-                      <p className="text-xs text-pink-400 italic">Action needed</p>
-                      <span className="text-xs font-bold text-pink-500 group-hover:translate-x-1 transition-transform flex items-center gap-1">
-                          View Inventory <ArrowRight className="w-3 h-3" />
-                      </span>
+                  <div className="mt-6 md:mt-8 flex justify-between items-center text-[10px] md:text-xs font-black uppercase tracking-widest text-red-500 dark:text-red-400">
+                      <span>Refill Required</span>
+                      <ArrowRight className="w-3.5 h-3.5 md:w-4 md:h-4 group-hover:translate-x-2 transition-transform" />
                   </div>
                </div>
             </div>
@@ -244,131 +245,169 @@ const DashboardPage: React.FC = () => {
             <div className="h-full">
               <div 
                 onClick={() => navigate('/inventory?filter=expiring')}
-                className="relative h-full overflow-hidden rounded-[2rem] p-6 cursor-pointer group border border-orange-500/30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-2xl hover:scale-[1.02] transition-all flex flex-col justify-between"
+                className="relative h-full overflow-hidden rounded-2xl md:rounded-[2.5rem] p-6 md:p-8 cursor-pointer group border border-orange-500/20 bg-white dark:bg-slate-900 shadow-xl hover:shadow-orange-500/10 hover:scale-[1.02] transition-all flex flex-col justify-between"
               >
                 <div className="flex justify-between items-start">
                     <div>
-                      <p className="text-xs font-black text-orange-500 uppercase tracking-widest mb-1">Expiry Risk</p>
+                      <p className="text-[10px] md:text-xs font-black text-orange-500 dark:text-orange-400 uppercase tracking-widest mb-1 md:mb-2">Expiry Risk</p>
                       <div className="flex items-baseline gap-2">
-                          <span className="text-4xl font-black text-slate-900 dark:text-white">{stats.expiring}</span>
-                          <span className="text-sm text-slate-400 font-bold uppercase">Items</span>
+                          <span className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white">{stats.expiring}</span>
+                          <span className="text-[10px] md:text-xs text-slate-400 font-black uppercase">Batches</span>
                       </div>
                     </div>
-                    <div className="bg-orange-500/20 p-2 rounded-xl text-orange-500 animate-pulse">
-                      <AlertCircle className="w-6 h-6" />
+                    <div className="bg-orange-500/10 dark:bg-orange-500/30 p-2.5 md:p-3 rounded-xl md:rounded-2xl text-orange-500 dark:text-orange-400 shadow-sm dark:shadow-orange-500/20">
+                      <AlertCircle className="w-6 h-6 md:w-7 md:h-7" />
                     </div>
                 </div>
-                
-                <div className="mt-6 pt-4 border-t border-orange-500/20 flex justify-between items-end">
-                    {stats.expiringValue && stats.expiringValue > 0 ? (
-                      <div>
-                          <p className="text-[10px] uppercase font-bold text-orange-400">Potential Loss</p>
-                          <p className="text-xl font-black text-red-500">-{formatRupee(stats.expiringValue)}</p>
-                      </div>
-                    ) : (
-                        <p className="text-xs text-green-500 font-bold flex items-center gap-1">✅ No Risk</p>
-                    )}
-                    
-                    <span className="text-xs font-bold text-orange-500 group-hover:translate-x-1 transition-transform flex items-center gap-1">
-                        Review List <ArrowRight className="w-3 h-3" />
-                    </span>
+                <div className="mt-6 md:mt-8 flex justify-between items-center text-[10px] md:text-xs font-black uppercase tracking-widest text-orange-500 dark:text-orange-400">
+                    <span>Review Expiry</span>
+                    <ArrowRight className="w-3.5 h-3.5 md:w-4 md:h-4 group-hover:translate-x-2 transition-transform" />
                 </div>
               </div>
             </div>
 
-            {/* Active Stock */}
-            <div className="h-full p-6 rounded-[2rem] bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 dark:border-slate-700 shadow-2xl dark:shadow-none flex flex-col justify-between">
+            {/* TOTAL INVENTORY */}
+            <div className="h-full p-6 md:p-8 rounded-2xl md:rounded-[2.5rem] bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-xl flex flex-col justify-between sm:col-span-2 lg:col-span-1">
                 <div>
-                   <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Total Inventory</p>
+                   <p className="text-[10px] md:text-xs font-black text-slate-400 uppercase tracking-widest mb-1 md:mb-2">Total Management</p>
                    <div className="flex items-baseline gap-2">
-                      <span className="text-4xl font-black text-slate-900 dark:text-white">{stats.totalStock}</span>
-                      <span className="text-sm text-slate-400 font-bold uppercase">Medicines</span>
+                      <span className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white">{stats.totalStock}</span>
+                      <span className="text-[10px] md:text-xs text-slate-400 font-black uppercase">Active SKUs</span>
                    </div>
                 </div>
-                <div className="flex justify-end mt-4">
-                    <div className="bg-blue-500/20 p-2 rounded-xl text-blue-500">
-                        <Package className="w-6 h-6" />
+                <div className="flex justify-end mt-4 md:mt-6">
+                    <div className="bg-brand-primary/10 dark:bg-brand-primary/30 p-2.5 md:p-3 rounded-xl md:rounded-2xl text-brand-primary dark:text-brand-highlight shadow-sm dark:shadow-brand-primary/20">
+                        <Package className="w-6 h-6 md:w-7 md:h-7" />
                     </div>
                 </div>
             </div>
         </div>
 
         {/* MAIN CHART */}
-        <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 dark:border-slate-700 rounded-[2rem] p-6 shadow-2xl dark:shadow-none overflow-hidden">
-            <div className="flex justify-between items-center mb-6">
-                <h3 className="font-black text-slate-900 dark:text-white uppercase text-sm tracking-widest flex items-center gap-2">
-                  <BarChart3 className="w-4 h-4 text-blue-500" /> Revenue Trends
+        <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl md:rounded-[2.5rem] shadow-xl relative z-20">
+            <div 
+                style={{ background: 'linear-gradient(90deg, #0E5A4E 0%, #1E7F4F 50%, #25A756 100%)' }}
+                className="px-6 py-4 md:px-8 md:py-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 relative rounded-t-2xl md:rounded-t-[2.5rem]"
+            >
+                <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-t-2xl md:rounded-t-[2.5rem]">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-8 -mt-8"></div>
+                </div>
+                <h3 className="font-black text-white uppercase text-[10px] md:text-xs tracking-[0.2em] flex items-center gap-2 relative z-10">
+                  <BarChart3 className="w-4 h-4 md:w-5 md:h-5 text-brand-highlight" /> Sales Analytics
                 </h3>
-                <select 
-                  className="bg-slate-100 dark:bg-slate-900 border-none text-xs font-bold rounded-lg px-3 py-1 text-slate-500 outline-none"
-                  value={chartDays}
-                  onChange={(e) => setChartDays(Number(e.target.value))}
-                >
-                    <option value={7}>Last 7 Days</option>
-                    <option value={14}>Last 14 Days</option>
-                    <option value={30}>Last 30 Days</option>
-                </select>
+                
+                {/* Premium Custom Dropdown */}
+                <div className="relative z-50 w-full sm:w-auto">
+                    <button 
+                        onClick={() => setIsChartDropdownOpen(!isChartDropdownOpen)}
+                        className="w-full sm:w-auto flex items-center justify-between gap-3 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl transition-all backdrop-blur-md group"
+                    >
+                        <div className="flex items-center gap-2">
+                            <Calendar className="w-3.5 h-3.5 text-brand-highlight" />
+                            <span className="text-[10px] font-black text-white uppercase tracking-widest">
+                                Last {chartDays} Days
+                            </span>
+                        </div>
+                        <ChevronDown className={`w-3.5 h-3.5 text-white/60 transition-transform duration-300 ${isChartDropdownOpen ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {/* Dropdown Menu */}
+                    {isChartDropdownOpen && (
+                        <>
+                            <div className="fixed inset-0 z-40" onClick={() => setIsChartDropdownOpen(false)}></div>
+                            <div className="absolute right-0 top-full mt-2 w-full sm:w-44 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 dark:border-slate-800 p-2 z-50 animate-in fade-in zoom-in-95 duration-200 origin-top-right">
+                                {[7, 14, 30].map((days) => (
+                                    <button
+                                        key={days}
+                                        onClick={() => { setChartDays(days); setIsChartDropdownOpen(false); }}
+                                        className={`w-full text-left px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                                            chartDays === days 
+                                            ? 'bg-gradient-to-r from-[#0B5E4A] to-[#1FAE63] text-white shadow-lg' 
+                                            : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5'
+                                        }`}
+                                    >
+                                        {days} Days Report
+                                    </button>
+                                ))}
+                            </div>
+                        </>
+                    )}
+                </div>
             </div>
-            <div className="w-full h-[300px]">
-               <SalesChart sales={Array.isArray(sales) ? sales : []} days={chartDays} />
+            <div className="p-6 md:p-8 relative z-10">
+                <div className="w-full h-[250px] md:h-[350px]">
+                   <SalesChart sales={Array.isArray(sales) ? sales : []} days={chartDays} />
+                </div>
             </div>
         </div>
 
-        {/* TABLES */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* TABLES / LOGS */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
           
           {/* Top Selling */}
-          <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 dark:border-slate-700 rounded-[2rem] p-6 shadow-2xl dark:shadow-none h-full">
-            <div className="flex justify-between items-center mb-6 border-b border-gray-100 dark:border-slate-700 pb-4">
-              <h3 className="font-black text-slate-900 dark:text-white uppercase text-sm tracking-widest flex items-center gap-2">
-                <Flame className="w-4 h-4 text-orange-500" /> Top Movers
-              </h3>
+          <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl md:rounded-[2.5rem] shadow-xl overflow-hidden">
+            <div 
+                style={{ background: 'linear-gradient(90deg, #0E5A4E 0%, #1E7F4F 50%, #25A756 100%)' }}
+                className="px-6 py-4 md:px-8 md:py-5 flex justify-between items-center relative overflow-hidden"
+            >
+                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-8 -mt-8 pointer-events-none"></div>
+                <h3 className="font-black text-white uppercase text-[10px] md:text-xs tracking-[0.2em] flex items-center gap-2 relative z-10">
+                    <Flame className="w-4 h-4 md:w-5 md:h-5 text-brand-highlight" /> Best Sellers
+                </h3>
             </div>
-            {lists.topSelling.length > 0 ? (
-              <div className="space-y-4">
-                {lists.topSelling.map((item, index) => (
-                <div key={index} className="flex justify-between items-center group">
-                  <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm transition-transform group-hover:scale-110 ${index === 0 ? 'bg-yellow-500 text-black shadow-lg shadow-yellow-500/30' : index === 1 ? 'bg-slate-300 text-slate-800' : index === 2 ? 'bg-orange-400 text-white' : 'bg-slate-700 text-slate-400'}`}>
-                      #{index + 1}
+            <div className="p-6 md:p-8">
+                {lists.topSelling.length > 0 ? (
+                <div className="space-y-4 md:space-y-6">
+                    {lists.topSelling.map((item, index) => (
+                    <div key={index} className="flex justify-between items-center group">
+                    <div className="flex items-center gap-3 md:gap-5">
+                        <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl flex items-center justify-center font-black text-xs md:text-sm transition-all group-hover:scale-110 ${index === 0 ? 'bg-brand-highlight text-brand-primary shadow-lg' : 'bg-slate-50 dark:bg-slate-800 text-slate-400'}`}>
+                        {index + 1}
+                        </div>
+                        <div className="overflow-hidden">
+                            <p className="text-xs md:text-sm font-black text-slate-900 dark:text-white capitalize truncate max-w-[120px] sm:max-w-none">{item.name}</p>
+                            <p className="text-[9px] md:text-[10px] text-slate-400 uppercase font-black tracking-widest mt-0.5">Primary Product</p>
+                        </div>
                     </div>
-                    <div>
-                        <p className="text-sm font-bold text-slate-900 dark:text-white capitalize">{item.name}</p>
-                        <p className="text-[10px] text-slate-400 uppercase font-bold">Best Seller</p>
+                    <div className="text-right flex-shrink-0">
+                        <span className="block font-black text-lg md:text-xl text-slate-900 dark:text-white">{item.count}</span>
+                        <span className="text-[9px] md:text-[10px] text-slate-400 uppercase font-black tracking-widest">Units Sold</span>
                     </div>
-                  </div>
-                  <div className="text-right">
-                    <span className="block font-black text-lg text-slate-900 dark:text-white">{item.count}</span>
-                    <span className="text-[10px] text-slate-500 uppercase font-bold">Units Sold</span>
-                  </div>
+                    </div>
+                ))}
                 </div>
-              ))}
-              </div>
-            ) : <div className="text-center py-10 text-slate-400 text-sm italic">No sales data yet.</div>}
+                ) : <div className="text-center py-10 text-slate-400 text-xs md:text-sm font-bold uppercase tracking-widest opacity-50">No Data</div>}
+            </div>
           </div>
           
           {/* Recent Arrivals */}
-          <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 dark:border-slate-700 rounded-[2rem] p-6 shadow-2xl dark:shadow-none h-full">
-            <div className="flex justify-between items-center mb-6 border-b border-gray-100 dark:border-slate-700 pb-4">
-              <h3 className="font-black text-slate-900 dark:text-white uppercase text-sm tracking-widest flex items-center gap-2">
-                <History className="w-4 h-4 text-indigo-500" /> Recent Log
-              </h3>
+          <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl md:rounded-[2.5rem] shadow-xl overflow-hidden">
+            <div 
+                style={{ background: 'linear-gradient(90deg, #0E5A4E 0%, #1E7F4F 50%, #25A756 100%)' }}
+                className="px-6 py-4 md:px-8 md:py-5 flex justify-between items-center relative overflow-hidden"
+            >
+                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-8 -mt-8 pointer-events-none"></div>
+                <h3 className="font-black text-white uppercase text-[10px] md:text-xs tracking-[0.2em] flex items-center gap-2 relative z-10">
+                    <History className="w-4 h-4 md:w-5 md:h-5 text-brand-highlight" /> Inventory Log
+                </h3>
             </div>
-            {lists.recentM.length > 0 ? (
-                <div className="space-y-3">
-                    {lists.recentM.map(m => (
-                    <div key={m._id} className="flex justify-between items-center p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors border border-transparent hover:border-gray-200 dark:hover:border-gray-700">
-                        <div>
-                            <p className="text-sm font-bold text-slate-900 dark:text-slate-200">{m.name}</p>
-                            <p className="text-[10px] text-slate-500 font-mono">{new Date(m.createdAt).toLocaleDateString()}</p>
+            <div className="p-6 md:p-8">
+                {lists.recentM.length > 0 ? (
+                    <div className="space-y-3 md:space-y-4">
+                        {lists.recentM.map(m => (
+                        <div key={m._id} className="flex justify-between items-center p-3 md:p-4 rounded-xl md:rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all border border-transparent hover:border-slate-100 dark:hover:border-slate-700">
+                            <div className="overflow-hidden">
+                                <p className="text-xs md:text-sm font-black text-slate-900 dark:text-slate-200 truncate">{m.name}</p>
+                                <p className="text-[9px] md:text-[10px] text-slate-400 font-black uppercase tracking-widest mt-0.5">{new Date(m.createdAt).toLocaleDateString()}</p>
+                            </div>
+                            <span className="text-[9px] md:text-[10px] font-black text-brand-primary bg-brand-primary/5 px-2.5 py-1 md:px-3 md:py-1.5 rounded-full border border-brand-primary/10 flex items-center gap-1.5 flex-shrink-0">
+                            <Package className="w-3 h-3 md:w-3.5 md:h-3.5" /> +{m.quantity ?? m.stock}
+                            </span>
                         </div>
-                        <span className="text-xs font-black text-indigo-500 bg-indigo-50 dark:bg-indigo-500/10 px-3 py-1 rounded-lg border border-indigo-100 dark:border-indigo-500/20 flex items-center gap-1">
-                          <Package className="w-3 h-3" /> +{m.quantity ?? m.stock}
-                        </span>
+                        ))}
                     </div>
-                    ))}
-                </div>
-            ) : <p className="text-center py-10 text-slate-400 text-sm italic">No inventory added yet.</p>}
+                ) : <div className="text-center py-10 text-slate-400 text-xs md:text-sm font-bold uppercase tracking-widest opacity-50">Empty Log</div>}
+            </div>
           </div>
         </div>
 

@@ -1,17 +1,16 @@
-import React, { useState, useRef } from 'react';
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import React, { useState, useRef, useEffect } from 'react';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import ThemeToggle from '../components/ThemeToggle';
+import { useTheme } from '../context/ThemeContext';
 import apiClient from '../api';
 import toast from 'react-hot-toast';
 import ImageCropModal from '../components/ImageCropModal';
-// 🆕 Icons
 import { 
   LayoutDashboard, 
   Pill, 
   Truck, 
   History, 
-  StickyNote, 
+  NotebookPen, 
   LifeBuoy, 
   Settings, 
   LogOut, 
@@ -19,15 +18,38 @@ import {
   ShieldCheck, 
   BarChart3,
   Ticket,
-  Camera
+  Camera,
+  Megaphone,
+  BadgeCheck,
+  Menu,
+  X,
+  ChevronRight,
+  Command,
+  Moon,
+  Sun,
+  PanelLeftClose
 } from 'lucide-react';
 
 const DashboardWrapper: React.FC = () => {
   const { logout, login, user } = useAuth(); 
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
-  const [isSidebarOpen, setSidebarOpen] = useState(false);
+  const location = useLocation();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Close menus on route change
+  useEffect(() => {
+    setIsMenuOpen(false);
+    setIsProfileOpen(false);
+  }, [location]);
+
+  // 🔄 Force Full Page Reload on Navigation
+  const handleNavigation = (path: string) => {
+    window.location.href = path; // Force Full Reload for ALL Routes
+  };
 
   const handleLogout = () => {
     logout();
@@ -37,16 +59,14 @@ const DashboardWrapper: React.FC = () => {
   const handleProfileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    if (file.size > 5 * 1024 * 1024) { // 5MB limit for raw file
+    if (file.size > 5 * 1024 * 1024) { 
       toast.error("Image too large. Max 5MB.");
       return;
     }
-
     const reader = new FileReader();
     reader.onloadend = () => {
       setSelectedImage(reader.result as string);
-      if (fileInputRef.current) fileInputRef.current.value = ''; // Reset input
+      if (fileInputRef.current) fileInputRef.current.value = ''; 
     };
     reader.readAsDataURL(file);
   };
@@ -62,151 +82,225 @@ const DashboardWrapper: React.FC = () => {
     }
   };
 
-  const navLinkClass = ({ isActive }: { isActive: boolean }) => 
-    `flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-all duration-300 font-bold text-sm tracking-wide ${
-      isActive 
-        ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-xl shadow-blue-500/30 translate-x-1' 
-        : 'text-slate-500 hover:bg-white/50 hover:text-blue-600 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-white hover:pl-6'
-    }`;
-
   const displayName = user?.pharmacyName || "Zyra";
   const isAdmin = user?.role === 'admin' || user?.role === 'superadmin';
 
+  // --- NAVIGATION CONFIG ---
+  const navItems = isAdmin ? [
+    { label: 'Overview', path: '/admin-dashboard', icon: BarChart3 },
+    { label: 'Manage Users', path: '/admin-users', icon: Users },
+    { label: 'Verification', path: '/admin-licenses', icon: BadgeCheck },
+    { label: 'Broadcasts', path: '/admin-announcements', icon: Megaphone },
+    { label: 'Audit Logs', path: '/admin-logs', icon: ShieldCheck },
+    { label: 'Support Tickets', path: '/admin-support', icon: Ticket },
+    { label: 'Platform Settings', path: '/admin-settings', icon: Settings },
+  ] : [
+    { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+    { label: 'Inventory', path: '/inventory', icon: Pill },
+    { label: 'Sales History', path: '/sales', icon: History },
+    { label: 'Suppliers', path: '/suppliers', icon: Truck },
+    { label: 'Notes', path: '/notes', icon: NotebookPen },
+    { label: 'Support', path: '/support', icon: LifeBuoy },
+    { label: 'Settings', path: '/settings', icon: Settings },
+  ];
+
+  const NavItem = ({ item }: { item: any }) => {
+    const isActive = location.pathname === item.path;
+    return (
+      <button 
+        onClick={() => handleNavigation(item.path)}
+        className={`
+          w-full group relative flex items-center gap-4 px-4 py-3.5 transition-all duration-300 text-left rounded-xl
+          ${isActive 
+            ? 'bg-brand-highlight text-brand-dark shadow-md scale-[1.02]' 
+            : 'text-brand-50/70 hover:bg-white/5 hover:text-white'
+          }
+        `}
+      >
+        <item.icon className={`w-5 h-5 transition-transform ${isActive ? 'text-brand-dark' : 'text-brand-200/60 group-hover:scale-110 group-hover:text-brand-highlight'}`} />
+        <span className={`font-bold text-sm tracking-wide ${isActive ? 'text-brand-dark' : ''}`}>{item.label}</span>
+      </button>
+    );
+  };
+
   return (
-    <div className="flex h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden font-sans transition-colors duration-300">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans transition-colors duration-300 flex flex-col overflow-hidden">
       
-      {/* Mobile Sidebar Overlay */}
-      {isSidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black/60 z-20 lg:hidden backdrop-blur-sm"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* SIDEBAR */}
-      <aside className={`
-        fixed inset-y-0 left-0 z-30 w-72 bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl border-r border-white/20 dark:border-slate-800 transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0
-        ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} flex flex-col shadow-2xl
-      `}>
-        <div className="p-6 flex-1 overflow-y-auto no-scrollbar">
-          {/* LOGO AREA */}
-          <div className="flex items-center gap-4 mb-10 pl-2">
-            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white font-black text-2xl shadow-xl shrink-0 ${isAdmin ? 'bg-gradient-to-br from-red-500 to-red-600 shadow-red-500/30' : 'bg-gradient-to-br from-blue-500 to-blue-600 shadow-blue-500/30'}`}>
-              {displayName.charAt(0).toUpperCase()}
+      {/* ==================== 1. FIXED HEADER ==================== */}
+      <header 
+        style={{ background: 'linear-gradient(90deg, #0E5A4E 0%, #1E7F4F 50%, #25A756 100%)' }}
+        className="fixed top-0 left-0 right-0 z-40 h-20 border-b border-brand-dark shadow-md flex items-center justify-between px-6 lg:px-8 transition-all"
+      >
+        
+        {/* Left: Menu Trigger & Brand */}
+        <div className="flex items-center gap-6">
+            <button 
+                onClick={() => setIsMenuOpen(true)}
+                className="p-2.5 rounded-xl hover:bg-white/10 transition-colors text-brand-50 hover:text-white group"
+            >
+                <Menu className="w-6 h-6 group-hover:scale-110 transition-transform" />
+            </button>
+            
+            <div 
+                className="flex items-center gap-3 cursor-pointer group"
+                onClick={() => handleNavigation(isAdmin ? '/admin-dashboard' : '/dashboard')}
+            >
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-brand-primary font-black text-xl shadow-lg shrink-0 bg-brand-highlight shadow-black/20 group-hover:scale-105 transition-transform`}>
+                    {displayName.charAt(0).toUpperCase()}
+                </div>
+                <div className="hidden md:block">
+                    <h1 className="text-lg font-black tracking-tight text-white group-hover:text-brand-highlight transition-colors">
+                        {displayName}
+                    </h1>
+                </div>
             </div>
-            <div className="overflow-hidden">
-              <h1 className={`text-xl font-black tracking-tighter leading-none ${isAdmin ? 'text-slate-900 dark:text-white' : 'text-slate-900 dark:text-white'}`}>
-                {displayName}
-              </h1>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-                {isAdmin ? 'System Admin' : 'Pharmacy OS'}
-              </p>
-            </div>
-          </div>
-
-          {/* Navigation Links */}
-          <nav className="space-y-2">
-            {isAdmin ? (
-               <>
-                 <div className="px-4 mb-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Control Panel</div>
-                 <NavLink to="/admin-dashboard" end className={navLinkClass}><BarChart3 className="w-5 h-5"/> System Overview</NavLink>
-                 <NavLink to="/admin-users" className={navLinkClass}><Users className="w-5 h-5"/> Manage Users</NavLink>
-                 <NavLink to="/admin-logs" className={navLinkClass}><ShieldCheck className="w-5 h-5"/> Audit Logs</NavLink> 
-                 <NavLink to="/admin-support" className={navLinkClass}><Ticket className="w-5 h-5"/> Support Tickets</NavLink>
-               </>
-            ) : (
-               /* 💊 USER VIEW */
-               <>
-                 <NavLink to="/dashboard" end className={navLinkClass}><LayoutDashboard className="w-5 h-5"/> Dashboard</NavLink>
-                 
-                 <div className="my-6 border-t border-slate-200/50 dark:border-slate-800"></div>
-                 
-                 <div className="px-4 mb-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Operations</div>
-                 <NavLink to="/inventory" className={navLinkClass}><Pill className="w-5 h-5"/> Inventory</NavLink>
-                 <NavLink to="/suppliers" className={navLinkClass}><Truck className="w-5 h-5"/> Suppliers</NavLink>
-                 <NavLink to="/sales" className={navLinkClass}><History className="w-5 h-5"/> Sales History</NavLink>
-                 
-                 <div className="my-6 border-t border-slate-200/50 dark:border-slate-800"></div>
-
-                 <div className="px-4 mb-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Workspace</div>
-                 <NavLink to="/notes" className={navLinkClass}><StickyNote className="w-5 h-5"/> Notes</NavLink>
-                 <NavLink to="/support" className={navLinkClass}><LifeBuoy className="w-5 h-5"/> Support</NavLink>
-                 <NavLink to="/settings" className={navLinkClass}><Settings className="w-5 h-5"/> Settings</NavLink>
-               </>
-            )}
-          </nav>
         </div>
 
-        {/* BOTTOM PROFILE SECTION */}
-        <div className="p-4 m-4 mt-0 bg-white/50 dark:bg-slate-800/50 rounded-[2rem] border border-white/40 dark:border-slate-700/50 backdrop-blur-md shadow-lg">
-          
-          {/* Top Row: Avatar + Info + Toggle */}
-          <div className="flex items-center gap-3 mb-4">
-            {/* Profile Avatar with Hover Edit */}
-            <div 
-                className="relative w-11 h-11 cursor-pointer group shrink-0"
-                onClick={() => fileInputRef.current?.click()}
-            >
-                {user?.avatar ? (
-                    <img src={user.avatar} alt="Profile" className="w-full h-full rounded-full object-cover shadow-md ring-2 ring-white dark:ring-slate-700" />
-                ) : (
-                    <div className={`w-full h-full rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md ring-2 ring-white dark:ring-slate-700 ${isAdmin ? 'bg-gradient-to-br from-red-500 to-red-600' : 'bg-gradient-to-br from-blue-500 to-blue-600'}`}>
-                        {user?.username?.charAt(0).toUpperCase() || 'U'}
-                    </div>
+        {/* Right: Actions */}
+        <div className="flex items-center gap-4">
+            
+            {/* PROFILE DROPDOWN */}
+            <div className="relative">
+                <button 
+                    className="relative w-10 h-10 cursor-pointer group outline-none"
+                    onClick={() => setIsProfileOpen(!isProfileOpen)}
+                >
+                    {user?.avatar ? (
+                        <img src={user.avatar} alt="Profile" className="w-full h-full rounded-full object-cover ring-2 ring-brand-highlight shadow-md hover:ring-white transition-all" />
+                    ) : (
+                        <div className="w-full h-full rounded-full flex items-center justify-center bg-brand-dark text-brand-highlight font-bold text-sm ring-2 ring-brand-highlight hover:ring-white transition-all">
+                            {user?.username?.charAt(0).toUpperCase()}
+                        </div>
+                    )}
+                </button>
+
+                {/* Dropdown Menu */}
+                {isProfileOpen && (
+                    <>
+                        <div className="fixed inset-0 z-40" onClick={() => setIsProfileOpen(false)}></div>
+                        <div className="absolute right-0 top-full mt-4 w-72 bg-white dark:bg-[#043F3A] rounded-2xl shadow-2xl border border-slate-100 dark:border-white/5 p-4 z-50 animate-in fade-in zoom-in-95 duration-200 origin-top-right">
+                            
+                            {/* User Info Header */}
+                            <div className="flex items-center gap-4 pb-4 border-b border-slate-100 dark:border-white/5 mb-4">
+                                <div className="w-12 h-12 rounded-full bg-brand-highlight text-brand-primary flex items-center justify-center font-black text-xl shrink-0 shadow-sm overflow-hidden">
+                                    {user?.avatar ? (
+                                        <img src={user.avatar} alt="Profile" className="w-full h-full object-cover" />
+                                    ) : (
+                                        user?.username?.charAt(0).toUpperCase()
+                                    )}
+                                </div>
+                                <div className="overflow-hidden text-left">
+                                    <p className="font-bold text-slate-900 dark:text-white truncate">{user?.username}</p>
+                                    <p className="text-xs text-slate-500 dark:text-brand-200/60 truncate font-medium">{user?.email}</p>
+                                </div>
+                            </div>
+
+                            {/* Actions */}
+                            <div className="space-y-1.5">
+                                {/* Modern Theme Switcher Segmented Control */}
+                                <div className="bg-slate-50 dark:bg-black/20 p-1 rounded-xl flex items-center gap-1 mb-2">
+                                    <button 
+                                        onClick={() => theme !== 'light' && toggleTheme()}
+                                        className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${theme === 'light' ? 'bg-gradient-to-r from-brand-btn-start to-brand-btn-end text-white shadow-lg scale-105' : 'text-slate-400 hover:bg-brand-highlight/10 hover:text-brand-highlight'}`}
+                                    >
+                                        <Sun className="w-3.5 h-3.5" /> Light
+                                    </button>
+                                    <button 
+                                        onClick={() => theme !== 'dark' && toggleTheme()}
+                                        className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${theme === 'dark' ? 'bg-gradient-to-r from-brand-btn-start to-brand-btn-end text-white shadow-lg scale-105' : 'text-slate-400 hover:bg-brand-highlight/10 hover:text-brand-highlight'}`}
+                                    >
+                                        <Moon className="w-3.5 h-3.5" /> Dark
+                                    </button>
+                                </div>
+
+                                <button 
+                                    onClick={() => { fileInputRef.current?.click(); setIsProfileOpen(false); }}
+                                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-brand-50 dark:hover:bg-white/5 text-slate-600 dark:text-brand-50 font-bold text-xs transition-all duration-300 group hover:scale-[1.02] text-left"
+                                >
+                                    <div className="p-1.5 bg-brand-primary/10 dark:bg-white/10 text-brand-primary dark:text-brand-highlight rounded-lg group-hover:bg-brand-primary group-hover:text-white transition-colors">
+                                        <Camera className="w-4 h-4" />
+                                    </div>
+                                    Change Photo
+                                </button>
+                                
+                                <button 
+                                    onClick={() => { handleNavigation(isAdmin ? '/admin-settings' : '/settings'); setIsProfileOpen(false); }}
+                                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-brand-50 dark:hover:bg-white/5 text-slate-600 dark:text-brand-50 font-bold text-xs transition-all duration-300 group hover:scale-[1.02] text-left"
+                                >
+                                    <div className="p-1.5 bg-brand-primary/10 dark:bg-white/10 text-brand-primary dark:text-brand-highlight rounded-lg group-hover:bg-brand-primary group-hover:text-white transition-colors">
+                                        <Settings className="w-4 h-4" />
+                                    </div>
+                                    Account Settings
+                                </button>
+
+                                <div className="h-px bg-slate-100 dark:bg-white/5 my-1"></div>
+
+                                <button 
+                                    onClick={handleLogout}
+                                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl bg-brand-highlight text-brand-dark hover:bg-brand-highlight/90 transition-all duration-300 font-bold text-xs group hover:scale-[1.02] hover:-translate-y-0.5 shadow-md shadow-brand-highlight/20 text-left"
+                                >
+                                    <div className="p-1.5 bg-brand-dark/10 text-brand-dark rounded-lg group-hover:bg-brand-dark/20 transition-colors">
+                                        <LogOut className="w-4 h-4" />
+                                    </div>
+                                    Sign Out
+                                </button>
+                            </div>
+                        </div>
+                    </>
                 )}
                 
-                {/* Hover Overlay */}
-                <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Camera className="w-4 h-4 text-white" />
-                </div>
                 <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleProfileUpload} />
             </div>
+        </div>
+      </header>
 
-            <div className="overflow-hidden flex-1">
-              <p className="text-sm font-bold text-slate-900 dark:text-white truncate leading-tight">{user?.username || 'User'}</p>
-              <div className="flex items-center gap-1 mt-0.5">
-                <div className={`w-1.5 h-1.5 rounded-full ${isAdmin ? 'bg-red-500' : 'bg-green-500'} animate-pulse`}></div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Online</p>
-              </div>
+      {/* ==================== 2. SLIDING NAVIGATION PANEL ==================== */}
+      <div 
+        className={`fixed inset-0 bg-black/60 z-40 backdrop-blur-sm transition-opacity duration-500 ${isMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        onClick={() => setIsMenuOpen(false)}
+      />
+
+      <aside className={`
+        fixed inset-y-0 left-0 z-50 w-full md:w-[280px] bg-[#043F3A] shadow-2xl transform transition-transform duration-500 cubic-bezier(0.25, 1, 0.5, 1) flex flex-col border-r border-white/5
+        ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'}
+      `}>
+        <div className="p-8 pb-10 flex items-center justify-between">
+            <div className="flex items-center gap-3 text-white cursor-pointer group" onClick={() => handleNavigation(isAdmin ? '/admin-dashboard' : '/dashboard')}>
+                <img src="/logo.png" alt="Zyra Logo" className="h-14 w-auto object-contain transition-transform group-hover:scale-105" />
             </div>
-
-            <div className="shrink-0">
-               <ThemeToggle />
-            </div>
-          </div>
-
-          {/* Divider */}
-          <div className="h-px bg-slate-200/50 dark:bg-slate-700/50 mb-4 mx-1"></div>
-
-          {/* Bottom Row: Logout */}
-          <button 
-            onClick={handleLogout}
-            className="w-full group relative overflow-hidden flex items-center justify-center gap-2 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 h-11 rounded-2xl font-bold text-xs uppercase tracking-widest transition-all shadow-sm active:scale-[0.98] hover:shadow-red-500/20 hover:text-white dark:hover:text-white"
-          >
-            <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-red-500 to-red-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-            <span className="relative z-10 flex items-center gap-2">
-                <LogOut className="w-4 h-4" /> Sign Out
-            </span>
-          </button>
+            <button 
+                onClick={() => setIsMenuOpen(false)}
+                className="p-2 rounded-xl bg-white/5 border border-white/10 text-brand-highlight hover:bg-brand-highlight hover:text-brand-dark hover:border-brand-highlight transition-all duration-300 group/close shadow-sm shadow-brand-highlight/5"
+            >
+                <PanelLeftClose className="w-6 h-6 transition-transform group-hover/close:scale-110" />
+            </button>
         </div>
 
+        <nav className="flex-1 overflow-y-auto px-4 space-y-1 custom-scrollbar">
+            <div className="space-y-1">
+                {navItems.map((item, idx) => (
+                    <NavItem key={idx} item={item} />
+                ))}
+            </div>
+        </nav>
+
+        <div className="p-6 border-t border-white/5 bg-black/10">
+            <button 
+                onClick={handleLogout}
+                className="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl bg-brand-highlight text-brand-dark hover:bg-brand-highlight/90 transition-all duration-300 font-bold text-sm tracking-wide group shadow-lg shadow-brand-highlight/10 hover:-translate-y-0.5 active:scale-95"
+            >
+                <div className="p-1.5 bg-brand-dark/10 rounded-lg group-hover:bg-brand-dark/20 transition-colors">
+                    <LogOut className="w-5 h-5 transition-transform group-hover:-translate-x-1" />
+                </div>
+                Sign Out
+            </button>
+        </div>
       </aside>
 
-      <main className="flex-1 flex flex-col overflow-hidden relative">
-        {/* Background Pattern */}
-        <div className="absolute inset-0 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] dark:bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:24px_24px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,#000_70%,transparent_100%)] pointer-events-none z-0"></div>
-
-        <header className="lg:hidden bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 p-4 flex justify-between items-center z-10 sticky top-0">
-          <div className="flex items-center gap-2">
-             <span className="font-black text-gray-900 dark:text-white truncate max-w-[200px]">{displayName}</span>
-          </div>
-          <button onClick={() => setSidebarOpen(true)} className="text-2xl text-gray-600 dark:text-white">
-            ☰
-          </button>
-        </header>
-
-        <div className="flex-1 overflow-auto bg-transparent relative z-10">
-          <Outlet />
+      {/* ==================== 3. MAIN CONTENT AREA ==================== */}
+      <main className="flex-1 overflow-auto bg-transparent relative z-10 pt-20 scroll-smooth transition-all duration-300">
+        <div className={(location.pathname === '/dashboard' || location.pathname === '/inventory' || location.pathname === '/sales' || location.pathname === '/suppliers' || location.pathname === '/notes' || location.pathname === '/support' || location.pathname === '/settings' || location.pathname === '/admin-dashboard' || location.pathname === '/admin-users' || location.pathname === '/admin-licenses' || location.pathname === '/admin-announcements' || location.pathname === '/admin-logs' || location.pathname === '/admin-support' || location.pathname === '/admin-settings') ? 'w-full' : 'animate-fade-in-up max-w-7xl mx-auto p-6 lg:p-10'}>
+            <Outlet />
         </div>
       </main>
 

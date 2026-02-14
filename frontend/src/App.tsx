@@ -1,6 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
-import ThemeToggle from './components/ThemeToggle';
 
 function App() {
   // ✅ FIX: Removed 'token' from destructuring. 
@@ -30,8 +29,7 @@ function App() {
       {user && (
         <nav className="flex w-64 flex-col border-r border-gray-200 bg-white dark:border-slate-700 dark:bg-slate-800">
           <div className="flex h-16 items-center justify-between border-b px-4 dark:border-slate-700">
-            <h1 className="text-xl font-bold text-blue-600">Smart Pharmacy</h1>
-            <ThemeToggle />
+            <h1 className="text-xl font-bold text-brand-primary">Zyra</h1>
           </div>
           
           <div className="flex-1 space-y-1 p-4 overflow-y-auto">

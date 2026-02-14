@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import apiClient from '../api';
 import { useGoogleLogin } from '@react-oauth/google';
@@ -13,7 +13,11 @@ import {
   ShieldCheck, 
   Smartphone,
   ChevronRight,
-  ArrowRight
+  ArrowRight,
+  Upload,
+  Eye,
+  EyeOff,
+  MapPin
 } from 'lucide-react';
 
 const GoogleIcon = () => (
@@ -39,14 +43,17 @@ const GoogleIcon = () => (
 
 const Register: React.FC = () => {
   const navigate = useNavigate();
+  const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   // --- WIZARD STATE ---
   const [step, setStep] = useState<number>(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showPwd, setShowPwd] = useState(false);
+  const [showConfirmPwd, setShowConfirmPwd] = useState(false);
 
   // --- FORM DATA ---
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<any>({
     authProvider: 'email', 
     googleToken: '',
     otp: '',
@@ -61,25 +68,66 @@ const Register: React.FC = () => {
     city: '',
     state: '',
     pincode: '',
-    pharmacyContact: ''
+    pharmacyContact: '',
+    licenseDocument: null 
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setFormData({ ...formData, licenseDocument: e.target.files[0] });
+    }
+  };
+
+  // --- OTP HANDLERS ---
+  const handleOtpInput = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
+    const val = e.target.value;
+    if (isNaN(Number(val))) return; 
+
+    const currentOtp = formData.otp.split(''); 
+    while (currentOtp.length < 6) currentOtp.push(''); 
+    
+    currentOtp[index] = val.slice(-1); 
+    const newOtpString = currentOtp.join('').slice(0, 6);
+    
+    setFormData({ ...formData, otp: newOtpString });
+
+    if (val && index < 5) {
+        otpRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleOtpKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, index: number) => {
+    if (e.key === 'Backspace' && !formData.otp[index] && index > 0) {
+        otpRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handleOtpPaste = (e: React.ClipboardEvent) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData('text').slice(0, 6).split('');
+    const newOtp = formData.otp.split('');
+    while (newOtp.length < 6) newOtp.push('');
+
+    pastedData.forEach((char, i) => {
+        if (i < 6 && !isNaN(Number(char))) newOtp[i] = char;
+    });
+
+    setFormData({ ...formData, otp: newOtp.join('').slice(0, 6) });
+    otpRefs.current[Math.min(pastedData.length, 5)]?.focus();
+  };
+
   // --- HANDLERS ---
-  
-  // Custom Google Login Hook
   const googleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       try {
-        // Fetch User Info using the access token
         const userInfo = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
           headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
         }).then(res => res.json());
 
-        // Check if user already exists
         const check = await apiClient.post('/auth/check-user', { email: userInfo.email });
         if (check.data.exists) {
             toast.error("Account already registered. Please Login.");
@@ -89,7 +137,7 @@ const Register: React.FC = () => {
         setFormData({
           ...formData,
           authProvider: 'google',
-          googleToken: tokenResponse.access_token, // Send access token to backend
+          googleToken: tokenResponse.access_token,
           email: userInfo.email,
           fullName: userInfo.name,
           password: '',
@@ -121,7 +169,7 @@ const Register: React.FC = () => {
   };
 
   const verifyOtp = async () => {
-    if (!formData.otp) return toast.error("Please enter OTP");
+    if (!formData.otp || formData.otp.length < 6) return toast.error("Please enter complete 6-digit OTP");
     setLoading(true); setError('');
     try {
       await apiClient.post('/auth/verify-otp', { email: formData.email, otp: formData.otp });
@@ -131,340 +179,457 @@ const Register: React.FC = () => {
     } finally { setLoading(false); }
   };
 
+  const handleNextStep = (targetStep: number) => {
+    setError('');
+    if (step === 2 && targetStep === 3) {
+        if (!formData.fullName || !formData.mobile || !formData.password || !formData.confirmPassword) {
+            return setError("Please fill in all profile fields.");
+        }
+        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+        if (!passwordRegex.test(formData.password)) {
+            return setError("Password must be 8+ chars, with Uppercase, Lowercase, Number & Special Char.");
+        }
+        if (formData.password !== formData.confirmPassword) {
+            return setError("Passwords do not match.");
+        }
+    }
+    if (step === 3 && targetStep === 4) {
+        if (!formData.pharmacyName || !formData.drugLicense || !formData.licenseDocument) {
+            return setError("Please complete pharmacy identity and upload license.");
+        }
+    }
+    setStep(targetStep);
+  };
+
   const handleSubmit = async () => {
-    if (formData.password !== formData.confirmPassword) return setError("Passwords do not match");
-    if (!formData.drugLicense) return setError("Drug License is required");
+    if (!formData.address || !formData.city || !formData.state || !formData.pincode) {
+        return setError("Please complete all address details.");
+    }
 
     setLoading(true); setError('');
+    const data = new FormData();
+    Object.keys(formData).forEach(key => {
+      if (key !== 'licenseDocument' && formData[key] !== null) {
+        data.append(key, formData[key]);
+      }
+    });
+    if (formData.licenseDocument) {
+      data.append('licenseDocument', formData.licenseDocument);
+    }
+
     try {
-      await apiClient.post('/auth/register', formData);
-      setStep(4);
+      await apiClient.post('/auth/register', data, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setStep(5);
     } catch (err: any) {
+      console.error("Registration Error:", err);
       setError(err.response?.data?.message || 'Registration Failed');
     } finally { setLoading(false); }
   };
 
   // --- UI STEPS ---
   const steps = [
-    { num: 1, title: 'Identity' },
+    { num: 1, title: 'Verify' },
     { num: 2, title: 'Profile' },
     { num: 3, title: 'Entity' },
+    { num: 4, title: 'Location' },
   ];
 
+  const inputClasses = "w-full px-5 py-3.5 bg-slate-50/50 dark:bg-slate-800/30 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm outline-none transition-all placeholder:text-slate-400/70 dark:text-white hover:bg-white dark:hover:bg-slate-800/60 hover:border-brand-primary/40 dark:hover:border-brand-highlight/40 hover:shadow-lg hover:shadow-brand-primary/5 dark:hover:shadow-[0_0_20px_rgba(205,235,139,0.05)] focus:ring-4 focus:ring-brand-primary/10 focus:border-brand-primary dark:focus:border-brand-highlight";
+
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-500 font-sans flex items-center justify-center p-4 relative">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-500 font-sans flex items-center justify-center p-4 relative overflow-hidden">
       
+      {/* Heavy Animated Background Blobs */}
+      <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-brand-primary/10 rounded-full blur-[100px] animate-blob mix-blend-multiply dark:mix-blend-screen dark:opacity-20 pointer-events-none"></div>
+      <div className="absolute top-[20%] right-[-10%] w-[400px] h-[400px] bg-brand-dark/10 rounded-full blur-[100px] animate-blob animation-delay-2000 mix-blend-multiply dark:mix-blend-screen dark:opacity-20 pointer-events-none"></div>
+      <div className="absolute bottom-[-10%] left-[20%] w-[600px] h-[600px] bg-brand-highlight/20 rounded-full blur-[100px] animate-blob animation-delay-4000 mix-blend-multiply dark:mix-blend-screen dark:opacity-20 pointer-events-none"></div>
+
       {/* Subtle Background Pattern */}
       <div className="absolute inset-0 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] dark:bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:24px_24px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,#000_70%,transparent_100%)] pointer-events-none"></div>
 
-      <div className="w-full max-w-[500px] relative z-10">
+      <div className="w-full max-w-[500px] relative z-10 animate-in fade-in slide-in-from-bottom-8 duration-1000 ease-out-expo px-2 sm:px-0">
         
-        {/* Back navigation */}
-        <div className="mb-8 flex justify-between items-center px-2">
-            {(step > 1 && step < 4) ? (
+        {/* Back navigation & Step Indicator */}
+        <div className="mb-4 sm:mb-6 flex justify-between items-center px-2">
+            {(step > 0 && step < 5) ? (
                 <button 
                     onClick={() => setStep(step - 1)}
-                    className="group flex items-center gap-2 text-sm font-bold text-slate-400 hover:text-blue-600 transition-all"
+                    className="group flex items-center gap-2 text-sm font-bold text-slate-400 hover:text-brand-primary transition-all"
                 >
                     <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-                    <span>Back</span>
+                    <span className="hidden sm:inline">Back</span>
                 </button>
             ) : (
-                <Link to="/" className="group flex items-center gap-2 text-sm font-bold text-slate-400 hover:text-blue-600 transition-all">
+                <Link to="/" className="group flex items-center gap-2 text-sm font-bold text-slate-400 hover:text-brand-primary transition-all">
                     <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-                    <span>Return to Home</span>
+                    <span className="hidden sm:inline">Return to Home</span>
                 </Link>
             )}
-            {step > 0 && step < 4 && (
-                <div className="flex gap-1.5">
+            
+            {step > 0 && step < 5 && (
+                <div className="flex gap-1 sm:gap-1.5">
                     {steps.map((s) => (
-                        <div key={s.num} className={`h-1 w-6 rounded-full transition-all duration-500 ${step >= s.num ? 'bg-blue-600' : 'bg-slate-200 dark:bg-slate-800'}`}></div>
+                        <div key={s.num} className={`h-1 w-4 sm:w-5 rounded-full transition-all duration-500 ${step >= s.num ? 'bg-gradient-to-r from-brand-btn-start to-brand-btn-end' : 'bg-slate-200 dark:bg-slate-800'}`}></div>
                     ))}
                 </div>
             )}
         </div>
 
         {/* --- MAIN REGISTRATION CONTAINER --- */}
-        <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-slate-800 p-10 transition-all duration-300">
+        <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl rounded-[2rem] sm:rounded-[2.5rem] shadow-2xl border border-white/60 dark:border-slate-700 p-6 sm:p-8 lg:p-10 transition-all duration-500 hover:shadow-brand-primary/10">
             
             {/* BRANDING & HEADER */}
-            <div className="text-center mb-10">
-                <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-600 text-white font-black text-2xl mb-6 shadow-xl shadow-blue-500/30">
-                    Z
-                </div>
-                <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-none mb-3">
-                    Create Account
+            <div className="text-center mb-6 sm:mb-8">
+                <img src="/logo.png" alt="Zyra Logo" className="w-16 sm:w-20 h-auto mx-auto mb-3 sm:mb-4 object-contain drop-shadow-lg transform transition-transform hover:scale-110 hover:rotate-3" />
+                <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-none mb-2">
+                    {step === 5 ? "All Set!" : "Create Account"}
                 </h2>
-                <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">
-                    {step === 0 && "Choose your preferred sign-up method."}
-                    {step === 1 && "Secure your identity with email verification."}
-                    {step === 2 && "Tell us about yourself."}
-                    {step === 3 && "Register your pharmacy entity."}
+                <p className="text-slate-500 dark:text-slate-400 text-[10px] sm:text-xs font-medium uppercase tracking-widest">
+                    {step === 0 && "Choose Method"}
+                    {step === 1 && "Identity Verification"}
+                    {step === 2 && "Personal Profile"}
+                    {step === 3 && "Pharmacy Identity"}
+                    {step === 4 && "Pharmacy Location"}
+                    {step === 5 && "Application Received"}
                 </p>
             </div>
 
             {/* ERROR DISPLAY */}
             {error && (
-                <div className="bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 text-red-600 dark:text-red-400 p-4 rounded-2xl text-sm font-bold text-center mb-8 animate-in fade-in zoom-in duration-300">
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 text-red-600 dark:text-red-400 p-3 rounded-xl text-xs font-bold text-center mb-6 animate-in fade-in zoom-in duration-300">
                     {error}
                 </div>
             )}
 
             {/* --- STEP 0: METHOD SELECTION --- */}
             {step === 0 && (
-                <div className="space-y-4 animate-in fade-in zoom-in duration-300">
-                    
-                    {/* CUSTOM GOOGLE BUTTON */}
+                <div className="space-y-3 sm:space-y-4 animate-in fade-in zoom-in duration-500">
                     <button 
                         onClick={() => googleLogin()}
-                        className="w-full h-14 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-700 dark:text-white font-bold text-sm transition-all duration-300 hover:border-blue-500 hover:shadow-lg hover:shadow-blue-500/10 hover:-translate-y-1 active:scale-[0.98] flex items-center justify-center gap-3 group"
+                        className="w-full h-12 sm:h-14 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl md:rounded-2xl text-slate-700 dark:text-white font-bold text-sm transition-all duration-300 hover:border-brand-primary hover:shadow-lg hover:shadow-brand-primary/10 active:scale-[0.98] flex items-center justify-center gap-3 group"
                     >
                         <GoogleIcon />
                         <span>Sign up with Google</span>
                     </button>
                     
-                    <div className="relative flex py-2 items-center">
+                    <div className="relative flex py-2 sm:py-4 items-center">
                         <div className="flex-grow border-t border-slate-100 dark:border-slate-800"></div>
-                        <span className="flex-shrink mx-4 text-slate-400 text-[10px] font-black uppercase tracking-widest">Or</span>
+                        <span className="flex-shrink mx-4 text-slate-400 text-[9px] sm:text-[10px] font-black uppercase tracking-widest">Or</span>
                         <div className="flex-grow border-t border-slate-100 dark:border-slate-800"></div>
                     </div>
 
-                    {/* EMAIL BUTTON */}
                     <button 
                         onClick={startEmailFlow} 
-                        className="w-full h-14 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-700 dark:text-white font-bold text-sm transition-all duration-300 hover:border-blue-500 hover:shadow-lg hover:shadow-blue-500/10 hover:-translate-y-1 active:scale-[0.98] flex items-center justify-center gap-3 group"
+                        className="w-full h-12 sm:h-14 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl md:rounded-2xl text-slate-700 dark:text-white font-bold text-sm transition-all duration-300 hover:border-brand-primary hover:shadow-lg hover:shadow-brand-primary/10 active:scale-[0.98] flex items-center justify-center gap-3 group"
                     >
-                        <Mail className="w-5 h-5 text-slate-400 group-hover:text-blue-500 transition-colors" />
+                        <Mail className="w-5 h-5 text-slate-400 group-hover:text-brand-highlight transition-colors" />
                         <span>Continue with Email</span>
                     </button>
                     
-                    <p className="text-center text-slate-400 text-xs mt-6">
-                        Already have an account? <Link to="/login" className="text-blue-600 font-bold hover:text-blue-700 transition-colors hover:underline underline-offset-4">Log in</Link>
+                    <p className="text-center text-slate-400 text-[10px] sm:text-xs mt-4 sm:mt-6">
+                        Already have an account? <Link to="/login" className="text-brand-primary dark:text-brand-highlight font-bold hover:opacity-70 transition-colors">Log in</Link>
                     </p>
                 </div>
             )}
 
             {/* --- STEP 1: EMAIL VERIFICATION --- */}
             {step === 1 && (
-                <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
-                    <div className="space-y-5">
-                        <div className="space-y-2">
-                            <label className="text-sm font-bold text-slate-900 dark:text-white ml-1">Work Email</label>
-                            <div className="flex gap-2">
-                                <input 
-                                    name="email" 
-                                    type="email" 
-                                    value={formData.email} 
-                                    onChange={handleChange} 
-                                    className="flex-1 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl px-5 py-4 text-sm outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 dark:text-white transition-all shadow-sm placeholder:text-slate-400"
-                                    placeholder="Enter your email" 
-                                    autoFocus
-                                />
-                            </div>
-                             <button 
-                                onClick={sendOtp} 
-                                disabled={loading || !formData.email} 
-                                className={`w-full h-12 rounded-xl font-bold text-xs uppercase tracking-widest transition-all ${formData.email ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 hover:scale-[1.02] shadow-lg' : 'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-600 cursor-not-allowed'}`}
-                            >
-                                {loading ? 'Sending...' : 'Send Verification Code'}
-                            </button>
-                        </div>
-                        
-                        <div className="space-y-2">
-                            <div className="flex items-center justify-between ml-1">
-                                <label className="text-sm font-bold text-slate-900 dark:text-white">Verification Code</label>
-                                <span className="text-[10px] text-slate-400 font-medium">Check your inbox</span>
-                            </div>
+                <div className="space-y-5 sm:space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                    <div className="space-y-1.5">
+                        <label className="text-[10px] sm:text-xs font-bold text-brand-primary dark:text-brand-highlight ml-1">Email</label>
+                        <div className="flex gap-2">
                             <input 
-                                name="otp" 
-                                type="text" 
-                                maxLength={6}
-                                value={formData.otp} 
+                                name="email" 
+                                type="email" 
+                                value={formData.email} 
                                 onChange={handleChange} 
-                                placeholder="Enter 6-digit code" 
-                                className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl px-5 py-4 text-sm outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 dark:text-white transition-all shadow-sm placeholder:text-slate-400 tracking-widest font-mono" 
+                                className={`${inputClasses} flex-1 text-sm py-3 md:py-3.5`}
+                                placeholder="Enter your Email" 
+                                autoFocus
                             />
+                            <button 
+                                onClick={sendOtp} 
+                                disabled={loading || !formData.email || !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{3,}$/.test(formData.email)} 
+                                className={`px-3 sm:px-4 rounded-xl md:rounded-2xl font-bold text-[9px] sm:text-[10px] uppercase tracking-widest transition-all flex items-center gap-1.5 sm:gap-2 shrink-0 ${ (formData.email && /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{3,}$/.test(formData.email)) ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 hover:scale-[1.05] shadow-lg' : 'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-600 cursor-not-allowed'}`}
+                            >
+                                {loading ? '...' : 'Get OTP'} 
+                                {!loading && <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" />}
+                            </button>
                         </div>
                     </div>
 
-                    <div className="pt-2">
-                        <button 
-                            onClick={verifyOtp} 
-                            disabled={loading} 
-                            className="w-full h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl shadow-blue-600/20 transition-all transform hover:-translate-y-1 active:scale-[0.98] flex items-center justify-center gap-2"
-                        >
-                            Verify & Continue <ChevronRight className="w-4 h-4" />
-                        </button>
-                        
-                        <button onClick={() => setStep(0)} className="w-full mt-6 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 font-bold text-xs uppercase tracking-widest transition-colors">Change Method</button>
+                    <div className="space-y-3">
+                        <div className="flex justify-between items-center ml-1">
+                            <label className="text-[10px] sm:text-xs font-bold text-brand-primary dark:text-brand-highlight">Enter OTP</label>
+                            <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">6-digit code</span>
+                        </div>
+                        <div className="flex gap-1.5 sm:gap-2 justify-between">
+                            {[0, 1, 2, 3, 4, 5].map((index) => (
+                                <input 
+                                    key={index}
+                                    ref={el => otpRefs.current[index] = el}
+                                    type="text" 
+                                    maxLength={1}
+                                    value={formData.otp[index] || ''}
+                                    onChange={(e) => handleOtpInput(e, index)}
+                                    onKeyDown={(e) => handleOtpKeyDown(e, index)}
+                                    onPaste={handleOtpPaste}
+                                    className="w-full h-12 sm:h-14 bg-slate-50/50 dark:bg-slate-800/30 border border-slate-200 dark:border-slate-700 rounded-xl md:rounded-2xl text-lg sm:text-xl font-black text-center outline-none transition-all dark:text-white hover:bg-white dark:hover:bg-slate-800/60 hover:border-brand-primary/40 dark:hover:border-brand-highlight/40 hover:shadow-lg focus:ring-4 focus:ring-brand-primary/10 focus:border-brand-primary dark:focus:border-brand-highlight" 
+                                />
+                            ))}
+                        </div>
                     </div>
+
+                    <button 
+                        onClick={verifyOtp} 
+                        disabled={loading || formData.otp.length < 6} 
+                        className={`group relative overflow-hidden w-full h-12 sm:h-14 rounded-xl md:rounded-2xl font-black text-xs sm:text-sm uppercase tracking-widest shadow-xl transition-all transform flex items-center justify-center gap-2 ${formData.otp.length === 6 ? 'bg-gradient-to-r from-brand-btn-start to-brand-btn-end text-white shadow-brand-btn-start/30 hover:-translate-y-1 active:scale-[0.98]' : 'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-600 cursor-not-allowed'}`}
+                    >
+                        <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-shimmer"></div>
+                        <span className="relative flex items-center gap-2">Verify & Continue <ChevronRight className="w-4 h-4" /></span>
+                    </button>
                 </div>
             )}
 
-            {/* --- STEP 2: OWNER PROFILE --- */}
+            {/* --- STEP 2: PERSONAL PROFILE --- */}
             {step === 2 && (
-                <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
-                    <div className="space-y-5">
-                        <div className="space-y-2">
-                            <label className="text-sm font-bold text-slate-900 dark:text-white ml-1">Full Name</label>
+                <div className="space-y-4 sm:space-y-5 animate-in fade-in slide-in-from-right-4 duration-500">
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] sm:text-xs font-bold text-brand-primary dark:text-brand-highlight ml-1">Full Name</label>
                             <div className="relative group">
-                                <User className="absolute left-4 top-4 w-5 h-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                                <User className="absolute left-4 top-3 md:top-3.5 w-4 h-4 md:w-5 md:h-5 text-slate-400 group-focus-within:text-brand-primary transition-colors" />
                                 <input 
                                     name="fullName" 
                                     value={formData.fullName} 
                                     onChange={handleChange} 
-                                    className="w-full pl-12 pr-5 py-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 dark:text-white shadow-sm transition-all" 
-                                    placeholder="e.g. John Smith" 
+                                    className={`${inputClasses} pl-11 md:pl-12 text-sm py-3 md:py-3.5`} 
+                                    placeholder="Enter your name" 
                                 />
                             </div>
                         </div>
 
-                        <div className="space-y-2">
-                            <label className="text-sm font-bold text-slate-900 dark:text-white ml-1">Primary Mobile</label>
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] sm:text-xs font-bold text-brand-primary dark:text-brand-highlight ml-1">Mobile</label>
                             <div className="relative group">
-                                <Smartphone className="absolute left-4 top-4 w-5 h-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                                <Smartphone className="absolute left-4 top-3 md:top-3.5 w-4 h-4 md:w-5 md:h-5 text-slate-400 group-focus-within:text-brand-primary transition-colors" />
                                 <input 
                                     name="mobile" 
                                     value={formData.mobile} 
                                     onChange={handleChange} 
-                                    className="w-full pl-12 pr-5 py-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 dark:text-white shadow-sm transition-all" 
-                                    placeholder="10-digit number" 
+                                    className={`${inputClasses} pl-11 md:pl-12 text-sm py-3 md:py-3.5`} 
+                                    placeholder="Mobile number" 
                                 />
                             </div>
                         </div>
+                    </div>
 
-                        <div className="p-6 rounded-[2rem] border border-blue-50 dark:border-blue-900/20 bg-blue-50/30 dark:bg-blue-900/10 space-y-4">
-                            <div className="flex items-center gap-2 mb-1 text-blue-600 dark:text-blue-400">
-                                <Lock className="w-4 h-4" />
-                                <span className="text-sm font-bold uppercase tracking-tight">Security Access</span>
+                    <div className="p-4 sm:p-5 rounded-2xl border border-brand-primary/10 bg-brand-primary/5 dark:bg-brand-highlight/5 space-y-3 sm:space-y-4">
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] sm:text-xs font-bold text-brand-primary dark:text-brand-highlight ml-1">Password</label>
+                            <div className="relative group">
+                                <Lock className="absolute left-4 top-3 md:top-3.5 w-4 h-4 md:w-5 md:h-5 text-slate-400 group-focus-within:text-brand-primary transition-colors" />
+                                <input 
+                                    name="password" 
+                                    type={showPwd ? "text" : "password"} 
+                                    value={formData.password} 
+                                    onChange={handleChange} 
+                                    placeholder="Create password" 
+                                    className={`${inputClasses} pl-11 md:pl-12 pr-11 md:pr-12 text-sm py-3 md:py-3.5 !bg-white dark:!bg-slate-900`} 
+                                />
+                                <button type="button" onClick={() => setShowPwd(!showPwd)} className="absolute right-4 top-3 md:top-3.5 text-slate-400 hover:text-brand-primary transition-colors">
+                                    {showPwd ? <EyeOff className="w-4 h-4 md:w-5 md:h-5" /> : <Eye className="w-4 h-4 md:w-5 md:h-5" />}
+                                </button>
                             </div>
-                            <input 
-                                name="password" 
-                                type="password" 
-                                value={formData.password} 
-                                onChange={handleChange} 
-                                placeholder="Create Access Password" 
-                                className="w-full px-5 py-3.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 dark:text-white shadow-sm transition-all" 
-                            />
-                            <input 
-                                name="confirmPassword" 
-                                type="password" 
-                                value={formData.confirmPassword} 
-                                onChange={handleChange} 
-                                placeholder="Confirm Access Password" 
-                                className="w-full px-5 py-3.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 dark:text-white shadow-sm transition-all" 
-                            />
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] sm:text-xs font-bold text-brand-primary dark:text-brand-highlight ml-1">Confirm Password</label>
+                            <div className="relative group">
+                                <Lock className="absolute left-4 top-3 md:top-3.5 w-4 h-4 md:w-5 md:h-5 text-slate-400 group-focus-within:text-brand-primary transition-colors" />
+                                <input 
+                                    name="confirmPassword" 
+                                    type={showConfirmPwd ? "text" : "password"} 
+                                    value={formData.confirmPassword} 
+                                    onChange={handleChange} 
+                                    placeholder="Confirm password" 
+                                    className={`${inputClasses} pl-11 md:pl-12 pr-11 md:pr-12 text-sm py-3 md:py-3.5 !bg-white dark:!bg-slate-900`} 
+                                />
+                                <button type="button" onClick={() => setShowConfirmPwd(!showConfirmPwd)} className="absolute right-4 top-3 md:top-3.5 text-slate-400 hover:text-brand-primary transition-colors">
+                                    {showConfirmPwd ? <EyeOff className="w-4 h-4 md:w-5 md:h-5" /> : <Eye className="w-4 h-4 md:w-5 md:h-5" />}
+                                </button>
+                            </div>
                         </div>
                     </div>
 
-                    <div className="pt-2 flex gap-4">
-                        <button 
-                            onClick={() => setStep(formData.authProvider === 'google' ? 0 : 1)} 
-                            className="px-8 h-14 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-95"
-                        >
-                            Back
-                        </button>
-                        <button 
-                            onClick={() => setStep(3)} 
-                            className="flex-1 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl shadow-blue-600/20 transition-all transform hover:-translate-y-1 active:scale-[0.98] flex items-center justify-center gap-2"
-                        >
-                            Next: Entity Setup <ArrowRight className="w-4 h-4" />
-                        </button>
-                    </div>
+                    <button 
+                        onClick={() => handleNextStep(3)} 
+                        className="group relative overflow-hidden w-full h-12 sm:h-14 bg-gradient-to-r from-brand-btn-start to-brand-btn-end text-white rounded-xl md:rounded-2xl font-black text-xs sm:text-sm uppercase tracking-widest shadow-xl shadow-brand-btn-start/30 transition-all transform hover:-translate-y-1 active:scale-[0.98] flex items-center justify-center gap-2"
+                    >
+                        <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-shimmer"></div>
+                        <span className="relative flex items-center gap-2">Next Step <ArrowRight className="w-4 h-4" /></span>
+                    </button>
                 </div>
             )}
 
-            {/* --- STEP 3: PHARMACY ENTITY --- */}
+            {/* --- STEP 3: PHARMACY IDENTITY --- */}
             {step === 3 && (
-                <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
-                    <div className="grid grid-cols-1 gap-5">
-                        <div className="space-y-2">
-                            <label className="text-sm font-bold text-slate-900 dark:text-white ml-1">Pharmacy Name</label>
-                            <div className="relative group">
-                                <Store className="absolute left-4 top-4 w-5 h-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
-                                <input 
-                                    name="pharmacyName" 
-                                    value={formData.pharmacyName} 
-                                    onChange={handleChange} 
-                                    className="w-full pl-12 pr-5 py-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 dark:text-white shadow-sm transition-all" 
-                                    placeholder="Registered Entity Name" 
-                                />
-                            </div>
+                <div className="space-y-4 sm:space-y-5 animate-in fade-in slide-in-from-right-4 duration-500">
+                    <div className="space-y-1.5">
+                        <label className="text-[10px] sm:text-xs font-bold text-brand-primary dark:text-brand-highlight ml-1">Pharmacy Name</label>
+                        <div className="relative group">
+                            <Store className="absolute left-4 top-3 md:top-3.5 w-4 h-4 md:w-5 md:h-5 text-slate-400 group-focus-within:text-brand-primary transition-colors" />
+                            <input 
+                                name="pharmacyName" 
+                                value={formData.pharmacyName} 
+                                onChange={handleChange} 
+                                className={`${inputClasses} pl-11 md:pl-12 text-sm py-3 md:py-3.5`} 
+                                placeholder="Enter Pharmacy name" 
+                            />
                         </div>
-                        
-                        <div className="space-y-2">
-                            <label className="text-sm font-bold text-slate-900 dark:text-white ml-1">Drug License Identification</label>
-                            <div className="relative group">
-                                <ShieldCheck className="absolute left-4 top-4 w-5 h-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
-                                <input 
-                                    name="drugLicense" 
-                                    value={formData.drugLicense} 
-                                    onChange={handleChange} 
-                                    className="w-full pl-12 pr-5 py-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 dark:text-white font-mono shadow-sm transition-all" 
-                                    placeholder="DL-XXXXXX" 
-                                />
-                            </div>
+                    </div>
+                    
+                    <div className="space-y-1.5">
+                        <label className="text-[10px] sm:text-xs font-bold text-brand-primary dark:text-brand-highlight ml-1">Drug License No.</label>
+                        <div className="relative group">
+                            <ShieldCheck className="absolute left-4 top-3 md:top-3.5 w-4 h-4 md:w-5 md:h-5 text-slate-400 group-focus-within:text-brand-primary transition-colors" />
+                            <input 
+                                name="drugLicense" 
+                                value={formData.drugLicense} 
+                                onChange={handleChange} 
+                                className={`${inputClasses} pl-11 md:pl-12 font-mono text-sm py-3 md:py-3.5`} 
+                                placeholder="Enter License number" 
+                            />
                         </div>
                     </div>
 
-                    <div className="space-y-2">
-                        <label className="text-sm font-bold text-slate-900 dark:text-white ml-1">Physical Address</label>
-                        <input 
-                            name="address" 
-                            value={formData.address} 
-                            onChange={handleChange} 
-                            className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 dark:text-white shadow-sm transition-all" 
-                            placeholder="Street, Building, Suite..." 
-                        />
+                    <div className="space-y-1.5">
+                        <label className="text-[10px] sm:text-xs font-bold text-brand-primary dark:text-brand-highlight ml-1">License Document</label>
+                        <div className="relative group">
+                            <input 
+                                type="file" 
+                                accept="image/*,application/pdf" 
+                                onChange={handleFileChange} 
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20" 
+                            />
+                            <div className={`w-full p-3 sm:p-4 bg-slate-50/50 dark:bg-slate-800/30 border border-slate-200 dark:border-slate-700 rounded-2xl md:rounded-3xl transition-all duration-300 flex items-center gap-3 sm:gap-4 hover:border-brand-primary hover:bg-white dark:hover:bg-slate-800/60 ${formData.licenseDocument ? 'border-emerald-500 bg-emerald-50/5' : ''}`}>
+                                <div className={`p-2.5 sm:p-3 rounded-xl sm:rounded-2xl transition-all ${formData.licenseDocument ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 group-hover:bg-brand-primary group-hover:text-white'}`}>
+                                    <Upload className="w-4 h-4 sm:w-5 sm:h-5" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className={`text-[9px] sm:text-[10px] font-black uppercase tracking-[0.1em] ${formData.licenseDocument ? 'text-emerald-600 dark:text-emerald-400' : 'text-brand-primary dark:text-brand-highlight'}`}>
+                                        {formData.licenseDocument ? 'File Ready' : 'Choose License'}
+                                    </p>
+                                    <p className="text-[10px] sm:text-xs font-bold text-slate-700 dark:text-slate-300 truncate">
+                                        {formData.licenseDocument ? formData.licenseDocument.name : "Select file"}
+                                    </p>
+                                </div>
+                                <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center transition-all duration-500 ${formData.licenseDocument ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 scale-110 opacity-100' : 'opacity-0 scale-50'}`}>
+                                    <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <input 
-                            name="city" 
-                            value={formData.city} 
-                            onChange={handleChange} 
-                            placeholder="City" 
-                            className="px-5 py-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 dark:text-white shadow-sm transition-all" 
-                        />
-                        <input 
-                            name="pincode" 
-                            value={formData.pincode} 
-                            onChange={handleChange} 
-                            placeholder="Zip/Pin" 
-                            className="px-5 py-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 dark:text-white shadow-sm transition-all" 
-                        />
-                    </div>
-
-                    <div className="pt-2 flex gap-4">
-                        <button 
-                            onClick={() => setStep(2)} 
-                            className="px-8 h-14 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-95"
-                        >
-                            Back
-                        </button>
-                        <button 
-                            onClick={handleSubmit} 
-                            disabled={loading} 
-                            className="flex-1 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl shadow-blue-600/20 transition-all transform hover:-translate-y-1 active:scale-[0.98] flex items-center justify-center gap-2"
-                        >
-                            {loading ? 'Creating...' : 'Complete Setup'} <CheckCircle2 className="w-4 h-4" />
-                        </button>
-                    </div>
+                    <button 
+                        onClick={() => handleNextStep(4)} 
+                        className="group relative overflow-hidden w-full h-12 sm:h-14 bg-gradient-to-r from-brand-btn-start to-brand-btn-end text-white rounded-xl md:rounded-2xl font-black text-xs sm:text-sm uppercase tracking-widest shadow-xl shadow-brand-btn-start/30 transition-all transform hover:-translate-y-1 active:scale-[0.98] flex items-center justify-center gap-2"
+                    >
+                        <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-shimmer"></div>
+                        <span className="relative flex items-center gap-2">Final Step <ArrowRight className="w-4 h-4" /></span>
+                    </button>
                 </div>
             )}
 
-            {/* --- STEP 4: SUCCESS --- */}
+            {/* --- STEP 4: PHARMACY LOCATION --- */}
             {step === 4 && (
-                <div className="text-center py-8 animate-in zoom-in duration-500">
-                    <div className="w-20 h-20 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
-                        <CheckCircle2 className="w-10 h-10" />
+                <div className="space-y-4 sm:space-y-5 animate-in fade-in slide-in-from-right-4 duration-500">
+                    <div className="space-y-1.5">
+                        <label className="text-[10px] sm:text-xs font-bold text-brand-primary dark:text-brand-highlight ml-1">Street Address</label>
+                        <div className="relative group">
+                            <MapPin className="absolute left-4 top-3 md:top-3.5 w-4 h-4 md:w-5 md:h-5 text-slate-400 group-focus-within:text-brand-primary transition-colors" />
+                            <input 
+                                name="address" 
+                                value={formData.address} 
+                                onChange={handleChange} 
+                                className={`${inputClasses} pl-11 md:pl-12 text-sm py-3 md:py-3.5`} 
+                                placeholder="Street and building number" 
+                            />
+                        </div>
                     </div>
-                    <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-3">All Set!</h2>
-                    <p className="text-slate-500 dark:text-slate-400 text-sm mb-8 leading-relaxed px-4">
-                        Your account is currently <b>Pending Approval</b>. <br/> We will notify you once verified.
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] sm:text-xs font-bold text-brand-primary dark:text-brand-highlight ml-1">City</label>
+                            <div className="relative group">
+                                <Store className="absolute left-4 top-3 md:top-3.5 w-4 h-4 md:w-5 md:h-5 text-slate-400 group-focus-within:text-brand-primary transition-colors" />
+                                <input 
+                                    name="city" 
+                                    value={formData.city} 
+                                    onChange={handleChange} 
+                                    className={`${inputClasses} pl-11 md:pl-12 text-sm py-3 md:py-3.5`}
+                                    placeholder="City" 
+                                />
+                            </div>
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] sm:text-xs font-bold text-brand-primary dark:text-brand-highlight ml-1">State</label>
+                            <div className="relative group">
+                                <ShieldCheck className="absolute left-4 top-3 md:top-3.5 w-4 h-4 md:w-5 md:h-5 text-slate-400 group-focus-within:text-brand-primary transition-colors" />
+                                <input 
+                                    name="state" 
+                                    value={formData.state} 
+                                    onChange={handleChange} 
+                                    className={`${inputClasses} pl-11 md:pl-12 text-sm py-3 md:py-3.5`}
+                                    placeholder="State" 
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <label className="text-[10px] sm:text-xs font-bold text-brand-primary dark:text-brand-highlight ml-1">Pincode</label>
+                        <div className="relative group">
+                            <Smartphone className="absolute left-4 top-3 md:top-3.5 w-4 h-4 md:w-5 md:h-5 text-slate-400 group-focus-within:text-brand-primary transition-colors" />
+                            <input 
+                                name="pincode" 
+                                value={formData.pincode} 
+                                onChange={handleChange} 
+                                className={`${inputClasses} pl-11 md:pl-12 text-sm py-3 md:py-3.5`}
+                                placeholder="6-digit pincode" 
+                            />
+                        </div>
+                    </div>
+
+                    <button 
+                        onClick={handleSubmit} 
+                        disabled={loading} 
+                        className="group relative overflow-hidden w-full h-12 sm:h-14 bg-gradient-to-r from-brand-btn-start to-brand-btn-end text-white rounded-xl md:rounded-2xl font-black text-xs sm:text-sm uppercase tracking-widest shadow-xl shadow-brand-btn-start/30 transition-all transform hover:-translate-y-1 active:scale-[0.98] flex items-center justify-center gap-2 mt-2"
+                    >
+                        <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-shimmer"></div>
+                        <span className="relative flex items-center gap-2">
+                            {loading ? 'Submitting...' : 'Complete Setup'} <CheckCircle2 className="w-4 h-4" />
+                        </span>
+                    </button>
+                </div>
+            )}
+
+            {/* --- STEP 5: SUCCESS --- */}
+            {step === 5 && (
+                <div className="text-center py-4 sm:py-6 animate-in zoom-in duration-500">
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6 shadow-sm">
+                        <CheckCircle2 className="w-8 h-8 sm:w-10 sm:h-10" />
+                    </div>
+                    <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mb-2">Application Received</h3>
+                    <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mb-6 sm:mb-8 leading-relaxed px-4">
+                        Your account is currently <b>Pending Approval</b>. We will notify you once verified.
                     </p>
-                    <Link to="/login" className="block w-full bg-slate-900 dark:bg-white dark:text-slate-900 text-white py-3.5 rounded-xl font-bold text-sm shadow-lg transition-all hover:scale-[1.02]">
-                        Go to Login
+                    <Link to="/login" className="group relative overflow-hidden block w-full bg-gradient-to-r from-brand-btn-start to-brand-btn-end text-white py-3 sm:py-4 rounded-xl md:rounded-2xl font-bold text-xs sm:text-sm shadow-lg shadow-brand-btn-start/30 transition-all hover:scale-[1.02] text-center">
+                        <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-shimmer"></div>
+                        <span className="relative">Return to Login</span>
                     </Link>
                 </div>
             )}

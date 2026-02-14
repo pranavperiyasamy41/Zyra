@@ -2,7 +2,8 @@ import { Router } from 'express';
 import { protect } from '../middleware/authMiddleware.js'; 
 import { 
   getNotes, 
-  createNote, // ✅ FIXED: Changed 'addNote' to 'createNote'
+  createNote, 
+  updateNote,
   deleteNote 
 } from '../controllers/note.controller.js';
 
@@ -10,8 +11,10 @@ const router = Router();
 
 router.route('/')
   .get(protect, getNotes)
-  .post(protect, createNote); // ✅ FIXED: Uses createNote
+  .post(protect, createNote);
 
-router.delete('/:id', protect, deleteNote);
+router.route('/:id')
+  .put(protect, updateNote)
+  .delete(protect, deleteNote);
 
 export default router;

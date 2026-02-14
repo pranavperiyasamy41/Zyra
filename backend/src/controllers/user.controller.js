@@ -1,5 +1,32 @@
 import User from '../models/user.model.js';
 
+// 🆕 Get User Profile
+export const getUserProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (user) {
+      res.json({
+        _id: user._id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        pharmacyName: user.pharmacyName,
+        avatar: user.avatar,
+        address: user.address,
+        city: user.city,
+        state: user.state,
+        pincode: user.pincode,
+        drugLicense: user.drugLicense,
+        pharmacyContact: user.pharmacyContact,
+      });
+    } else {
+      res.status(404).json({ message: "User not found" });
+    }
+  } catch (error) {
+    res.status(500).json({ message: "Server Error" });
+  }
+};
+
 export const updateUserProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
@@ -21,6 +48,17 @@ export const updateUserProfile = async (req, res) => {
 
       // 3. Security (Password)
       if (req.body.password && req.body.password.length > 0) {
+        if (!req.body.currentPassword) {
+            res.status(400);
+            throw new Error("Current password is required to set a new password");
+        }
+        
+        const isMatch = await user.matchPassword(req.body.currentPassword);
+        if (!isMatch) {
+            res.status(401);
+            throw new Error("Invalid current password");
+        }
+
         user.password = req.body.password;
       }
 
