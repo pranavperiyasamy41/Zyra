@@ -161,10 +161,10 @@ const Login: React.FC = () => {
                     <div className="relative group">
                         <Lock className="absolute left-4 top-3 md:top-3.5 w-4 h-4 md:w-5 md:h-5 text-slate-400 group-focus-within:text-brand-primary transition-colors" />
                         <input
-                            type={showPwd ? "text" : "password"}
-                            className="w-full pl-11 md:pl-12 pr-11 md:pr-12 py-3 md:py-3.5 bg-slate-50/50 dark:bg-slate-800/30 border border-slate-200 dark:border-slate-700 rounded-xl md:rounded-2xl text-sm outline-none focus:ring-4 focus:ring-brand-primary/10 focus:border-brand-primary dark:text-white shadow-sm transition-all placeholder:text-slate-400/70 hover:bg-white dark:hover:bg-slate-800/50 hover:border-brand-primary/30"
-                            placeholder="Enter Password"
-                            value={password}
+                                                                type={showPwd ? "text" : "password"}
+                                                                autoComplete="current-password"
+                                                                className="w-full pl-11 md:pl-12 pr-11 md:pr-12 py-3 md:py-3.5 bg-slate-50/50 dark:bg-slate-800/30 border border-slate-200 dark:border-slate-700 rounded-xl md:rounded-2xl text-sm outline-none focus:ring-4 focus:ring-brand-primary/10 focus:border-brand-primary dark:text-white shadow-sm transition-all placeholder:text-slate-400/70 hover:bg-white dark:hover:bg-slate-800/50 hover:border-brand-primary/30"
+                                                                placeholder="Enter Password"                            value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             required
                         />

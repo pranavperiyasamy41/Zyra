@@ -25,11 +25,19 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // CORS Configuration
-const allowedOrigin = process.env.CORS_ORIGIN || "*";
+const rawOrigin = process.env.CORS_ORIGIN || "*";
+const allowedOrigin = rawOrigin.endsWith('/') ? rawOrigin.slice(0, -1) : rawOrigin;
+
 app.use(cors({
   origin: allowedOrigin,
   credentials: true
 }));
+
+// Security Headers for Google Login / COOP
+app.use((req, res, next) => {
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+  next();
+});
 
 // Resolve __dirname for ES Modules
 const __filename = fileURLToPath(import.meta.url);
