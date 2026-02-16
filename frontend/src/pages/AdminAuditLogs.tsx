@@ -90,7 +90,6 @@ const AdminAuditLogs = () => {
 
         {/* FILTERS TOOLBAR */}
         <div className="flex flex-col md:flex-row flex-wrap gap-3 w-full md:w-auto justify-start md:justify-end">
-            
             {/* Custom Action Dropdown */}
             <div className="relative w-full md:w-auto" ref={dropdownRef}>
                 <div 
@@ -104,7 +103,6 @@ const AdminAuditLogs = () => {
                     <ChevronDown className={`absolute right-4 top-3 md:top-3.5 w-3.5 h-3.5 md:w-4 md:h-4 transition-transform duration-300 ${isActionOpen ? 'rotate-180 text-teal-500' : 'text-slate-400'}`} />
                 </div>
 
-                {/* Dropdown Menu */}
                 {isActionOpen && (
                     <div className="absolute top-full left-0 right-0 mt-2 md:mt-3 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200 dark:border-slate-700 rounded-[1.5rem] shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                         <div className="p-2 space-y-1">
@@ -158,57 +156,60 @@ const AdminAuditLogs = () => {
       </div>
 
       {/* 📌 RESPONSIVE SPACER FOR FIXED HEADER */}
-      <div className="h-[240px] md:h-[140px] w-full"></div>
+      <div className="h-[280px] md:h-[165px] lg:h-[195px] w-full"></div>
 
-      <div className="p-4 md:p-6 lg:p-8 pt-2 md:pt-4 max-w-7xl mx-auto">
+      <div className="p-4 md:p-6 lg:p-8 pt-2 max-w-7xl mx-auto">
         
-        {/* DESKTOP TABLE VIEW (Hidden on Mobile) */}
-        <div className="hidden md:block bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-[2.5rem] shadow-2xl border border-white/20 dark:border-slate-800 overflow-x-auto">
-            <table className="w-full text-left">
-                <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-800 sticky top-[140px] z-10 shadow-sm backdrop-blur-md">
-                        <tr>
-                            <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-black dark:text-white">Timestamp</th>
-                            <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-black dark:text-white">Actor</th>
-                            <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-black dark:text-white">IP Address</th>
-                            <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-black dark:text-white">Event Type</th>
-                            <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-black dark:text-white">Description</th>
+        {/* DESKTOP TABLE VIEW */}
+        <div className="hidden md:block bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl border border-slate-200 dark:border-slate-800">
+            <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                    <thead>
+                        <tr className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+                            <th className="sticky top-0 z-20 px-8 py-5 text-[10px] font-black uppercase tracking-widest text-black dark:text-white bg-slate-50 dark:bg-slate-800 shadow-sm">Timestamp</th>
+                            <th className="sticky top-0 z-20 px-8 py-5 text-[10px] font-black uppercase tracking-widest text-black dark:text-white bg-slate-50 dark:bg-slate-800 shadow-sm">Actor</th>
+                            <th className="sticky top-0 z-20 px-8 py-5 text-[10px] font-black uppercase tracking-widest text-black dark:text-white bg-slate-50 dark:bg-slate-800 shadow-sm">IP Address</th>
+                            <th className="sticky top-0 z-20 px-8 py-5 text-[10px] font-black uppercase tracking-widest text-black dark:text-white bg-slate-50 dark:bg-slate-800 shadow-sm">Event Type</th>
+                            <th className="sticky top-0 z-20 px-8 py-5 text-[10px] font-black uppercase tracking-widest text-black dark:text-white bg-slate-50 dark:bg-slate-800 shadow-sm">Description</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                        {displayedLogs.length > 0 ? displayedLogs.map((log: any) => (
-                        <tr key={log._id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/30 transition-colors group">
-                            <td className="px-8 py-5">
-                                <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 font-mono text-xs">
-                                    <Clock className="w-3.5 h-3.5 text-slate-400" />
-                                    {new Date(log.createdAt).toLocaleString()}
-                                </div>
-                            </td>
-                            <td className="px-8 py-5">
-                                <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white text-sm">
-                                    <User className="w-4 h-4 text-blue-500" />
-                                    {log.actorName || 'System'}
-                                </div>
-                            </td>
-                            <td className="px-8 py-5">
-                                <span className="font-mono text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-md">
-                                    {log.ipAddress || 'Unknown'}
-                                </span>
-                            </td>
-                            <td className="px-8 py-5">
-                                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wide border ${
-                                    log.action.includes('APPROVED') ? 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800' :
-                                    log.action.includes('DELETED') ? 'bg-red-50 text-red-600 border-red-200 dark:bg-red-900/20 dark:border-red-800' :
-                                    log.action.includes('RESOLVED') ? 'bg-purple-50 text-purple-600 border-purple-200 dark:bg-purple-900/20 dark:border-purple-800' :
-                                    'bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400'
-                                }`}>
-                                    <Activity className="w-3 h-3" /> {log.action.replace('_', ' ')}
-                                </span>
-                            </td>
-                            <td className="px-8 py-5 text-sm font-medium text-slate-600 dark:text-slate-300 leading-relaxed">
-                                {log.details}
-                            </td>
-                        </tr>
-                        )) : (
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-900">
+                        {displayedLogs.length > 0 ? (
+                            displayedLogs.map((log: any) => (
+                                <tr key={log._id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/30 transition-colors group">
+                                    <td className="px-8 py-5">
+                                        <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 font-mono text-xs">
+                                            <Clock className="w-3.5 h-3.5 text-slate-400" />
+                                            {new Date(log.createdAt).toLocaleString()}
+                                        </div>
+                                    </td>
+                                    <td className="px-8 py-5">
+                                        <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white text-sm">
+                                            <User className="w-4 h-4 text-blue-500" />
+                                            {log.actorName || 'System'}
+                                        </div>
+                                    </td>
+                                    <td className="px-8 py-5">
+                                        <span className="font-mono text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-md">
+                                            {log.ipAddress || 'Unknown'}
+                                        </span>
+                                    </td>
+                                    <td className="px-8 py-5">
+                                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wide border ${
+                                            log.action.includes('APPROVED') ? 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800' :
+                                            log.action.includes('DELETED') ? 'bg-red-50 text-red-600 border-red-200 dark:bg-red-900/20 dark:border-red-800' :
+                                            log.action.includes('RESOLVED') ? 'bg-purple-50 text-purple-600 border-purple-200 dark:bg-purple-900/20 dark:border-purple-800' :
+                                            'bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400'
+                                        }`}>
+                                            <Activity className="w-3 h-3" /> {log.action.replace('_', ' ')}
+                                        </span>
+                                    </td>
+                                    <td className="px-8 py-5 text-sm font-medium text-slate-600 dark:text-slate-300 leading-relaxed">
+                                        {log.details}
+                                    </td>
+                                </tr>
+                            ))
+                        ) : (
                             <tr>
                                 <td colSpan={5} className="px-8 py-24 text-center">
                                     <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-100 dark:border-slate-700">
@@ -221,69 +222,69 @@ const AdminAuditLogs = () => {
                     </tbody>
                 </table>
             </div>
+        </div>
 
-            {/* MOBILE CARD VIEW (Visible on Mobile) */}
-            <div className="md:hidden space-y-4">
-                {displayedLogs.length > 0 ? displayedLogs.map((log: any) => (
-                    <div key={log._id} className="bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800">
-                        <div className="flex justify-between items-start mb-3">
-                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wide border ${
-                                log.action.includes('APPROVED') ? 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800' :
-                                log.action.includes('DELETED') ? 'bg-red-50 text-red-600 border-red-200 dark:bg-red-900/20 dark:border-red-800' :
-                                log.action.includes('RESOLVED') ? 'bg-purple-50 text-purple-600 border-purple-200 dark:bg-purple-900/20 dark:border-purple-800' :
-                                'bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400'
-                            }`}>
-                                <Activity className="w-3 h-3" /> {log.action.replace('_', ' ')}
-                            </span>
-                            <span className="font-mono text-[10px] text-slate-400">{new Date(log.createdAt).toLocaleDateString()}</span>
-                        </div>
-                        
-                        <p className="text-sm font-medium text-slate-800 dark:text-slate-200 mb-3">{log.details}</p>
-                        
-                        <div className="flex items-center justify-between text-xs border-t border-slate-100 dark:border-slate-800 pt-3 mt-3">
-                            <div className="flex items-center gap-2 font-bold text-slate-700 dark:text-slate-300">
-                                <User className="w-3.5 h-3.5 text-blue-500" />
-                                {log.actorName || 'System'}
-                            </div>
-                            <span className="font-mono text-[10px] text-slate-400 bg-slate-50 dark:bg-slate-800 px-2 py-1 rounded">
-                                {log.ipAddress || 'Unknown'}
-                            </span>
-                        </div>
+        {/* MOBILE CARD VIEW */}
+        <div className="md:hidden space-y-4">
+            {displayedLogs.length > 0 ? displayedLogs.map((log: any) => (
+                <div key={log._id} className="bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800">
+                    <div className="flex justify-between items-start mb-3">
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wide border ${
+                            log.action.includes('APPROVED') ? 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800' :
+                            log.action.includes('DELETED') ? 'bg-red-50 text-red-600 border-red-200 dark:bg-red-900/20 dark:border-red-800' :
+                            log.action.includes('RESOLVED') ? 'bg-purple-50 text-purple-600 border-purple-200 dark:bg-purple-900/20 dark:border-purple-800' :
+                            'bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400'
+                        }`}>
+                            <Activity className="w-3 h-3" /> {log.action.replace('_', ' ')}
+                        </span>
+                        <span className="font-mono text-[10px] text-slate-400">{new Date(log.createdAt).toLocaleDateString()}</span>
                     </div>
-                )) : (
-                    <div className="text-center py-12 bg-white/50 dark:bg-slate-900/50 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
-                        <Search className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-                        <p className="text-slate-400 font-bold text-sm">No logs found.</p>
-                    </div>
-                )}
-            </div>
-
-            {/* PAGINATION */}
-            {totalPages > 1 && (
-                <div className="mt-4 p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex justify-between items-center backdrop-blur-md rounded-2xl md:rounded-none md:bg-transparent">
-                    <span className="text-[10px] md:text-xs font-black text-black dark:text-white uppercase tracking-wide ml-2">
-                        Page {page} / {totalPages}
-                    </span>
-                    <div className="flex gap-2">
-                        <button 
-                            disabled={page === 1}
-                            onClick={() => setPage(p => Math.max(1, p - 1))}
-                            className="p-2 md:p-2.5 rounded-xl bg-gradient-to-r from-[#0B5E4A] to-[#1FAE63] text-white shadow-lg shadow-[#0B5E4A]/20 transition-all hover:shadow-[#1FAE63]/40 active:scale-95 disabled:opacity-30 disabled:pointer-events-none disabled:shadow-none"
-                        >
-                            <ChevronLeft className="w-4 h-4" />
-                        </button>
-                        <button 
-                            disabled={page === totalPages}
-                            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                            className="p-2 md:p-2.5 rounded-xl bg-gradient-to-r from-[#0B5E4A] to-[#1FAE63] text-white shadow-lg shadow-[#0B5E4A]/20 transition-all hover:shadow-[#1FAE63]/40 active:scale-95 disabled:opacity-30 disabled:pointer-events-none disabled:shadow-none"
-                        >
-                            <ChevronRight className="w-4 h-4" />
-                        </button>
+                    <p className="text-sm font-medium text-slate-800 dark:text-slate-200 mb-3">{log.details}</p>
+                    <div className="flex items-center justify-between text-xs border-t border-slate-100 dark:border-slate-800 pt-3 mt-3">
+                        <div className="flex items-center gap-2 font-bold text-slate-700 dark:text-slate-300">
+                            <User className="w-3.5 h-3.5 text-blue-500" />
+                            {log.actorName || 'System'}
+                        </div>
+                        <span className="font-mono text-[10px] text-slate-400 bg-slate-50 dark:bg-slate-800 px-2 py-1 rounded">
+                            {log.ipAddress || 'Unknown'}
+                        </span>
                     </div>
                 </div>
+            )) : (
+                <div className="text-center py-12 bg-white/50 dark:bg-slate-900/50 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
+                    <Search className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+                    <p className="text-slate-400 font-bold text-sm">No logs found.</p>
+                </div>
             )}
+        </div>
+
+        {/* PAGINATION */}
+        {totalPages > 1 && (
+            <div className="mt-4 p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex justify-between items-center backdrop-blur-md rounded-2xl md:rounded-none md:bg-transparent">
+                <span className="text-[10px] md:text-xs font-black text-black dark:text-white uppercase tracking-wide ml-2">
+                    Page {page} / {totalPages}
+                </span>
+                <div className="flex gap-2">
+                    <button 
+                        disabled={page === 1}
+                        onClick={() => setPage(p => Math.max(1, p - 1))}
+                        className="p-2 md:p-2.5 rounded-xl bg-gradient-to-r from-[#0B5E4A] to-[#1FAE63] text-white shadow-lg shadow-[#0B5E4A]/20 transition-all hover:shadow-[#1FAE63]/40 active:scale-95 disabled:opacity-30 disabled:pointer-events-none disabled:shadow-none"
+                    >
+                        <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <button 
+                        disabled={page === totalPages}
+                        onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                        className="p-2 md:p-2.5 rounded-xl bg-gradient-to-r from-[#0B5E4A] to-[#1FAE63] text-white shadow-lg shadow-[#0B5E4A]/20 transition-all hover:shadow-[#1FAE63]/40 active:scale-95 disabled:opacity-30 disabled:pointer-events-none disabled:shadow-none"
+                    >
+                        <ChevronRight className="w-4 h-4" />
+                    </button>
+                </div>
+            </div>
+        )}
       </div>
     </div>
   );
 };
+
 export default AdminAuditLogs;

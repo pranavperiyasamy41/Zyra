@@ -84,7 +84,7 @@ const AdminDashboard = () => {
       </div>
 
       {/* 📌 RESPONSIVE SPACER FOR FIXED HEADER */}
-      <div className="h-[100px] md:h-[110px] lg:h-[100px] w-full"></div>
+      <div className="h-[100px] md:h-[110px] lg:h-[160px] w-full"></div>
 
       <div className="p-4 md:p-6 lg:p-8 pt-4 md:pt-6 lg:pt-4 max-w-[1600px] mx-auto">
         

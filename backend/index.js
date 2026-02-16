@@ -24,11 +24,17 @@ connectDB();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// CORS Configuration
+const allowedOrigin = process.env.CORS_ORIGIN || "*";
+app.use(cors({
+  origin: allowedOrigin,
+  credentials: true
+}));
+
 // Resolve __dirname for ES Modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-app.use(cors());
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 

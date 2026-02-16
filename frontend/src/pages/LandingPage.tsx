@@ -19,31 +19,11 @@ import {
 } from 'lucide-react';
 
 const LandingPage = () => {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white transition-colors duration-300 font-sans selection:bg-blue-500 selection:text-white overflow-x-hidden">
+    <div className="selection:bg-blue-500 selection:text-white overflow-x-hidden">
       
-      {/* ==================== 1. NAVBAR ==================== */}
-      <nav className="fixed top-0 w-full z-50 backdrop-blur-md bg-gradient-to-r from-teal-600/90 via-emerald-600/90 to-green-600/90 border-b border-white/20 transition-all shadow-2xl">
-        <div className="container mx-auto px-4 sm:px-6 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-2 group cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-            <img src="/logo.png" alt="Zyra Logo" className="h-10 sm:h-12 w-auto object-contain transition-transform duration-300 group-hover:scale-110" />
-          </div>
-          
-          <div className="flex items-center">
-            <Link 
-              to="/login" 
-              className="text-[10px] sm:text-sm font-black text-white hover:text-brand-highlight transition-all uppercase tracking-widest px-4 sm:px-6 py-2 bg-white/10 hover:bg-white/20 rounded-xl border border-white/10"
-            >
-              Sign In
-            </Link>
-          </div>
-        </div>
-      </nav>
-
       {/* ==================== 2. HERO SECTION ==================== */}
-      <section id="home" className="relative pt-28 pb-16 lg:pt-48 lg:pb-40 overflow-hidden text-center">
+      <section id="home" className="relative pt-12 pb-16 lg:pt-24 lg:pb-40 overflow-hidden text-center">
         
         {/* LIGHT/DARK MODE: Vibrant Animated Mesh Gradients */}
         <div className="absolute inset-0 w-full h-full -z-10 bg-[radial-gradient(circle_at_50%_50%,_rgba(255,255,255,0.8),transparent)] dark:bg-[radial-gradient(circle_at_50%_50%,_rgba(15,23,42,0.9),transparent)]"></div>
@@ -264,72 +244,6 @@ const LandingPage = () => {
             </div>
         </div>
       </section>
-
-      {/* ==================== 6. FOOTER ==================== */}
-      <footer className="relative bg-gradient-to-r from-teal-600 via-emerald-600 to-green-600 pt-16 sm:pt-24 pb-12 border-t border-white/20 overflow-hidden">
-        {/* Advanced Decorative Elements */}
-        <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/30 to-transparent"></div>
-        <div className="absolute -top-24 -left-24 w-96 h-96 bg-teal-500/20 rounded-full blur-[120px] animate-pulse"></div>
-        <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-emerald-500/20 rounded-full blur-[120px] animate-pulse animation-delay-2000"></div>
-
-        <div className="container mx-auto px-4 sm:px-6 relative z-10">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 sm:gap-12 mb-16">
-                <div className="col-span-1 sm:col-span-2 lg:col-span-1">
-                    <div className="flex items-center gap-2 mb-6 group cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-                        <img src="/logo.png" alt="Zyra Logo" className="h-12 lg:h-14 w-auto object-contain transition-transform duration-300 group-hover:scale-110" />
-                    </div>
-                    <p className="text-emerald-100/70 text-sm leading-relaxed mb-8 max-w-sm">
-                        The #1 Inventory Management System designed specifically for modern pharmacies. Secure, fast, and intelligent.
-                    </p>
-                    <div className="flex gap-4">
-                        <a href="https://twitter.com/zyrasystems" target="_blank" rel="noopener noreferrer" className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-white/10 backdrop-blur-lg border border-white/20 flex items-center justify-center text-white hover:bg-white hover:text-teal-600 transition-all duration-300 shadow-lg hover:-translate-y-1">
-                            <Twitter className="w-5 h-5" />
-                        </a>
-                        <a href="https://linkedin.com/company/zyrasystems" target="_blank" rel="noopener noreferrer" className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-white/10 backdrop-blur-lg border border-white/20 flex items-center justify-center text-white hover:bg-white hover:text-teal-600 transition-all duration-300 shadow-lg hover:-translate-y-1">
-                            <Linkedin className="w-5 h-5" />
-                        </a>
-                        <a href="https://instagram.com/zyrasystems" target="_blank" rel="noopener noreferrer" className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-white/10 backdrop-blur-lg border border-white/20 flex items-center justify-center text-white hover:bg-white hover:text-teal-600 transition-all duration-300 shadow-lg hover:-translate-y-1">
-                            <Instagram className="w-5 h-5" />
-                        </a>
-                    </div>
-                </div>
-                <div>
-                    <h4 className="font-bold mb-4 sm:mb-6 text-white text-lg">Product</h4>
-                    <ul className="space-y-3 sm:space-y-4 text-sm text-emerald-100/60">
-                        <li><a href="#home" className="hover:text-white transition-colors">Features</a></li>
-                        <li><Link to="/register" className="hover:text-white transition-colors">Pricing</Link></li>
-                        <li><a href="#trusted" className="hover:text-white transition-colors">Trust Center</a></li>
-                        <li><a href="#home" className="hover:text-white transition-colors">Top</a></li>
-                    </ul>
-                </div>
-                <div>
-                    <h4 className="font-bold mb-4 sm:mb-6 text-white text-lg">Company</h4>
-                    <ul className="space-y-3 sm:space-y-4 text-sm text-emerald-100/60">
-                        <li><a href="#home" className="hover:text-white transition-colors">About Us</a></li>
-                        <li><a href="mailto:careers@zyrasystems.com" className="hover:text-white transition-colors">Careers</a></li>
-                        <li><a href="#home" className="hover:text-white transition-colors">Blog</a></li>
-                        <li><a href="mailto:support@zyrasystems.com" className="hover:text-white transition-colors">Contact</a></li>
-                    </ul>
-                </div>
-                <div>
-                    <h4 className="font-bold mb-4 sm:mb-6 text-white text-lg">Legal</h4>
-                    <ul className="space-y-3 sm:space-y-4 text-sm text-emerald-100/60">
-                        <li><a href="#" className="hover:text-white transition-colors">Privacy Policy</a></li>
-                        <li><a href="#" className="hover:text-white transition-colors">Terms of Service</a></li>
-                        <li><a href="#" className="hover:text-white transition-colors">Cookie Policy</a></li>
-                        <li><a href="#" className="hover:text-white transition-colors">Security</a></li>
-                    </ul>
-                </div>
-            </div>
-            <div className="pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4">
-                <p className="text-emerald-100/40 text-xs sm:text-sm text-center md:text-left">© 2026 Zyra Systems Inc. All rights reserved.</p>
-                <div className="flex items-center gap-2 text-sm text-emerald-100/40 font-medium hover:text-white transition-colors cursor-pointer">
-                    <Globe className="w-4 h-4" />
-                    <span>English (US)</span>
-                </div>
-            </div>
-        </div>
-      </footer>
     </div>
   );
 };

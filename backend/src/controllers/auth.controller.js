@@ -120,7 +120,8 @@ export const register = async (req, res) => {
     } = req.body;
 
     const finalUsername = username || fullName;
-    const licenseDocument = req.file ? `http://localhost:5000/${req.file.path.split('\\').join('/')}` : ""; 
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const licenseDocument = req.file ? `${baseUrl}/${req.file.path.split('\\').join('/')}` : ""; 
 
     if (authProvider === 'google') {
        // 🟢 NEW: Verify Access Token via Google API
