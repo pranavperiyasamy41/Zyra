@@ -14,6 +14,7 @@ import userRoutes from './src/routes/user.routes.js';
 import ticketRoutes from './src/routes/ticket.routes.js';
 import supplierRoutes from './src/routes/supplier.routes.js'; 
 import systemSettingsRoutes from './src/routes/systemSettings.routes.js'; // 🆕 IMPORT
+import contactRoutes from './src/routes/contact.routes.js';
 
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -61,6 +62,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/tickets', ticketRoutes); 
 app.use('/api/suppliers', supplierRoutes); 
 app.use('/api/settings', systemSettingsRoutes); // 🆕 ROUTE
+app.use('/api/contact', contactRoutes);
 
 // ✅ REBRANDED
 app.get('/', (req, res) => { res.send('Zyra API is running!'); });

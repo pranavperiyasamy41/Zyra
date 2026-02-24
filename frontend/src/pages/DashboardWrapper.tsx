@@ -237,9 +237,9 @@ const DashboardWrapper: React.FC = () => {
 
                                 <button 
                                     onClick={handleLogout}
-                                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl bg-brand-highlight text-brand-dark hover:bg-brand-highlight/90 transition-all duration-300 font-bold text-xs group hover:scale-[1.02] hover:-translate-y-0.5 shadow-md shadow-brand-highlight/20 text-left"
+                                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl bg-gradient-to-r from-brand-btn-start to-brand-btn-end text-white hover:opacity-90 transition-all duration-300 font-bold text-xs group hover:scale-[1.02] hover:-translate-y-0.5 shadow-md shadow-brand-btn-start/20 text-left"
                                 >
-                                    <div className="p-1.5 bg-brand-dark/10 text-brand-dark rounded-lg group-hover:bg-brand-dark/20 transition-colors">
+                                    <div className="p-1.5 bg-white/10 text-white rounded-lg group-hover:bg-white/20 transition-colors">
                                         <LogOut className="w-4 h-4" />
                                     </div>
                                     Sign Out
@@ -287,9 +287,9 @@ const DashboardWrapper: React.FC = () => {
         <div className="p-6 border-t border-white/5 bg-black/10">
             <button 
                 onClick={handleLogout}
-                className="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl bg-brand-highlight text-brand-dark hover:bg-brand-highlight/90 transition-all duration-300 font-bold text-sm tracking-wide group shadow-lg shadow-brand-highlight/10 hover:-translate-y-0.5 active:scale-95"
+                className="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl bg-gradient-to-r from-brand-btn-start to-brand-btn-end text-white hover:opacity-90 transition-all duration-300 font-bold text-sm tracking-wide group shadow-lg shadow-brand-btn-start/10 hover:-translate-y-0.5 active:scale-95"
             >
-                <div className="p-1.5 bg-brand-dark/10 rounded-lg group-hover:bg-brand-dark/20 transition-colors">
+                <div className="p-1.5 bg-white/10 rounded-lg group-hover:bg-white/20 transition-colors">
                     <LogOut className="w-5 h-5 transition-transform group-hover:-translate-x-1" />
                 </div>
                 Sign Out

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Twitter, Linkedin, Instagram, Globe } from 'lucide-react';
+import { Linkedin, Globe } from 'lucide-react';
 
 const PublicFooter: React.FC = () => {
   const scrollToTop = () => {
@@ -24,14 +24,8 @@ const PublicFooter: React.FC = () => {
               The #1 Inventory Management System designed specifically for modern pharmacies. Secure, fast, and intelligent.
             </p>
             <div className="flex gap-4">
-              <a href="https://twitter.com/zyrasystems" target="_blank" rel="noopener noreferrer" className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-white/10 backdrop-blur-lg border border-white/20 flex items-center justify-center text-white hover:bg-white hover:text-teal-600 transition-all duration-300 shadow-lg hover:-translate-y-1">
-                <Twitter className="w-5 h-5" />
-              </a>
-              <a href="https://linkedin.com/company/zyrasystems" target="_blank" rel="noopener noreferrer" className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-white/10 backdrop-blur-lg border border-white/20 flex items-center justify-center text-white hover:bg-white hover:text-teal-600 transition-all duration-300 shadow-lg hover:-translate-y-1">
+              <a href="https://www.linkedin.com/in/pranav41/" target="_blank" rel="noopener noreferrer" className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-white/10 backdrop-blur-lg border border-white/20 flex items-center justify-center text-white hover:bg-white hover:text-teal-600 transition-all duration-300 shadow-lg hover:-translate-y-1">
                 <Linkedin className="w-5 h-5" />
-              </a>
-              <a href="https://instagram.com/zyrasystems" target="_blank" rel="noopener noreferrer" className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-white/10 backdrop-blur-lg border border-white/20 flex items-center justify-center text-white hover:bg-white hover:text-teal-600 transition-all duration-300 shadow-lg hover:-translate-y-1">
-                <Instagram className="w-5 h-5" />
               </a>
             </div>
           </div>
