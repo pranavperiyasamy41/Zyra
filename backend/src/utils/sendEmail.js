@@ -13,16 +13,21 @@ const sendEmail = async (to, subject, htmlContent) => {
   try {
     const transporter = nodemailer.createTransport({
       host: 'smtp.gmail.com',
-      port: 465,
-      secure: true, // use SSL
+      port: 587,
+      secure: false, // Use STARTTLS
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
       },
       tls: {
-        rejectUnauthorized: false // Helps with some hosting provider certificate issues
-      }
+        rejectUnauthorized: false
+      },
+      connectionTimeout: 10000, // 10 seconds
+      greetingTimeout: 10000,
+      socketTimeout: 15000
     });
+
+    console.log("🔗 SMTP Connection initialized. Sending...");
 
     const info = await transporter.sendMail({
       from: `"Zyra Systems" <${process.env.EMAIL_USER}>`,
@@ -34,7 +39,11 @@ const sendEmail = async (to, subject, htmlContent) => {
     console.log("✅ Email sent successfully ID:", info.messageId);
     return true;
   } catch (error) {
-    console.error("❌ CRITICAL EMAIL ERROR:", error);
+    console.error("❌ CRITICAL EMAIL ERROR:");
+    console.error("Error Name:", error.name);
+    console.error("Error Message:", error.message);
+    console.error("Error Code:", error.code);
+    console.error("Command:", error.command);
     return false;
   }
 };
