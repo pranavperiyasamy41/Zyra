@@ -91,8 +91,12 @@ export const sendOtp = async (req, res) => {
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     await Otp.findOneAndUpdate({ email }, { email, otp }, { upsert: true, new: true });
 
-    await sendEmail(email, "Verify Your Email", getEmailTemplate(otp, 'VERIFY'));
+    const emailSent = await sendEmail(email, "Verify Your Email", getEmailTemplate(otp, 'VERIFY'));
     
+    if (!emailSent) {
+      return res.status(500).json({ message: "Failed to send OTP email. Please try again later or check server logs." });
+    }
+
     res.status(200).json({ message: "OTP Sent" });
   } catch (error) { res.status(500).json({ message: "Server Error" }); }
 };
@@ -322,7 +326,11 @@ export const forgotPassword = async (req, res) => {
     );
 
     // ✅ USE NEW TEMPLATE
-    await sendEmail(email, "🔑 Password Reset Request", getEmailTemplate(otp, 'RESET'));
+    const emailSent = await sendEmail(email, "🔑 Password Reset Request", getEmailTemplate(otp, 'RESET'));
+
+    if (!emailSent) {
+      return res.status(500).json({ message: "Failed to send reset email. Please try again later." });
+    }
 
     res.json({ message: "OTP sent to your email" });
 
