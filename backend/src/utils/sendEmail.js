@@ -1,51 +1,77 @@
-import nodemailer from 'nodemailer';
+import { OAuth2Client } from 'google-auth-library';
+import axios from 'axios';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
 const sendEmail = async (to, subject, htmlContent) => {
-  console.log("📨 ATTEMPTING TO SEND EMAIL...");
-  console.log(`👉 To: ${to}`);
-  console.log(`👉 User: ${process.env.EMAIL_USER}`);
-  // Show only first 3 chars of password for security check
-  console.log(`👉 Pass Loaded: ${process.env.EMAIL_PASS ? "YES (Starts with " + process.env.EMAIL_PASS.substring(0,3) + ")" : "NO ❌"}`);
+  console.log("📨 ATTEMPTING TO SEND EMAIL VIA GMAIL API (HTTPS)...");
+  
+  const CLIENT_ID = process.env.GMAIL_CLIENT_ID;
+  const CLIENT_SECRET = process.env.GMAIL_CLIENT_SECRET;
+  const REFRESH_TOKEN = process.env.GMAIL_REFRESH_TOKEN;
+  const SENDER_EMAIL = process.env.EMAIL_USER;
+
+  if (!CLIENT_ID || !CLIENT_SECRET || !REFRESH_TOKEN) {
+    console.error("❌ MISSING GMAIL API CREDENTIALS. Please check GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, and GMAIL_REFRESH_TOKEN in environment variables.");
+    return false;
+  }
 
   try {
-    const transporter = nodemailer.createTransport({
-      host: 'smtp.googlemail.com', // Alternative host
-      port: 465,
-      secure: true,
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-      tls: {
-        rejectUnauthorized: false
-      },
-      debug: true, // 🔍 SHOW DETAILED DEBUG LOGS
-      logger: true, // 📝 LOG SMTP TRAFFIC TO CONSOLE
-      connectionTimeout: 20000, 
-      greetingTimeout: 20000,
-      socketTimeout: 25000
-    });
+    const oauth2Client = new OAuth2Client(
+      CLIENT_ID,
+      CLIENT_SECRET,
+      'https://developers.google.com/oauthplayground'
+    );
 
-    console.log("🔗 SMTP Connection initialized. Sending...");
+    oauth2Client.setCredentials({ refresh_token: REFRESH_TOKEN });
+    const { token } = await oauth2Client.getAccessToken();
 
-    const info = await transporter.sendMail({
-      from: `"Zyra Systems" <${process.env.EMAIL_USER}>`,
-      to: to,
-      subject: subject,
-      html: htmlContent,
-    });
+    if (!token) {
+        throw new Error("Failed to generate Access Token from Refresh Token.");
+    }
 
-    console.log("✅ Email sent successfully ID:", info.messageId);
+    // Construct RFC 2822 message
+    const utf8Subject = `=?utf-8?B?${Buffer.from(subject).toString('base64')}?=`;
+    const messageParts = [
+      `From: "Zyra Systems" <${SENDER_EMAIL}>`,
+      `To: ${to}`,
+      `Content-Type: text/html; charset=utf-8`,
+      `MIME-Version: 1.0`,
+      `Subject: ${utf8Subject}`,
+      '',
+      htmlContent
+    ];
+    const message = messageParts.join('\n');
+
+    // The body needs to be base64url encoded
+    const encodedMessage = Buffer.from(message)
+      .toString('base64')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+
+    const response = await axios.post(
+      `https://gmail.googleapis.com/gmail/v1/users/me/messages/send`,
+      { raw: encodedMessage },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    console.log("✅ Email sent successfully via API! ID:", response.data.id);
     return true;
   } catch (error) {
-    console.error("❌ CRITICAL EMAIL ERROR:");
-    console.error("Error Name:", error.name);
-    console.error("Error Message:", error.message);
-    console.error("Error Code:", error.code);
-    console.error("Command:", error.command);
+    console.error("❌ GMAIL API ERROR:");
+    if (error.response) {
+        console.error("Response Data:", error.response.data);
+        console.error("Status:", error.response.status);
+    } else {
+        console.error("Message:", error.message);
+    }
     return false;
   }
 };
