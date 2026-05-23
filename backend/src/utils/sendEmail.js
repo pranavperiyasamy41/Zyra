@@ -12,21 +12,21 @@ const sendEmail = async (to, subject, htmlContent) => {
 
   try {
     const transporter = nodemailer.createTransport({
-      host: 'smtp.gmail.com',
+      host: 'smtp.googlemail.com', // Alternative host
       port: 465,
-      secure: true, // Port 465 uses SSL/TLS
+      secure: true,
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
       },
       tls: {
-        rejectUnauthorized: false,
-        minVersion: 'TLSv1.2'
+        rejectUnauthorized: false
       },
-      family: 4, // 🚀 CRITICAL: Force IPv4. Gmail often times out over IPv6 on Render.
-      connectionTimeout: 15000, // 15 seconds
-      greetingTimeout: 15000,
-      socketTimeout: 20000
+      debug: true, // 🔍 SHOW DETAILED DEBUG LOGS
+      logger: true, // 📝 LOG SMTP TRAFFIC TO CONSOLE
+      connectionTimeout: 20000, 
+      greetingTimeout: 20000,
+      socketTimeout: 25000
     });
 
     console.log("🔗 SMTP Connection initialized. Sending...");
