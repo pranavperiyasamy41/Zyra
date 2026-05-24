@@ -18,14 +18,12 @@ const sendEmail = async (to, subject, htmlContent) => {
   }
 
   try {
-    const oauth2Client = new OAuth2Client(
-      CLIENT_ID,
-      CLIENT_SECRET,
-      'https://developers.google.com/oauthplayground'
-    );
-
+    const oauth2Client = new OAuth2Client(CLIENT_ID, CLIENT_SECRET);
     oauth2Client.setCredentials({ refresh_token: REFRESH_TOKEN });
-    const { token } = await oauth2Client.getAccessToken();
+
+    // Explicitly refresh the access token
+    const { credentials } = await oauth2Client.refreshAccessToken();
+    const token = credentials.access_token;
 
     if (!token) {
         throw new Error("Failed to generate Access Token from Refresh Token.");
